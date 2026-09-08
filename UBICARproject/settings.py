@@ -133,3 +133,6 @@ MAILERS = {
         'BACKEND': 'django.core.mail.backends.console.EmailBackend',
     },
 }
+
+from django.db.backends.mysql.features import DatabaseFeatures
+DatabaseFeatures.minimum_database_version = (8, 0, 0)
