@@ -7,6 +7,14 @@ from decimal import Decimal
 
 #arrancar con las clases independientes para no hacer una dependiente sin haber declarado de la que depende
 
+class Administrador(models.Model):
+    id_admin=models.IntegerField(primary_key=True)
+    nombre=models.CharField(max_length=30)
+    apellido=models.CharField(max_length=30)
+    mail=models.CharField(max_length=254)
+    telefono=models.CharField(max_length=20)
+    dni=models.PositiveIntegerField()
+
 class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada atributo de esta clase se convertirá en una columna de esa tabla
     patente=models.CharField(max_length=7,primary_key=True)
     tipo=models.CharField(max_length=50)
@@ -19,6 +27,7 @@ class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada
         decimal_places=2, 
         validators=[MinValueValidator(Decimal('0.01'))] # 
     )
+    #falta id admin e id conductor
 
 def __str__(self):
     return f"{self.pantente} - {self.modelo}"
