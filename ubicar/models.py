@@ -53,3 +53,23 @@ class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada
 
 def __str__(self):
     return f"{self.pantente} - {self.modelo}"
+
+
+class Ruta(models.Model):
+    id_ruta = models.IntegerField(primary_key=True)
+    origen=models.CharField(max_length=100)
+    destino=models.CharField(max_length=100)
+    distancia_estimada= models.DecimalField( 
+        max_digits=12, 
+        decimal_places=2, 
+        validators=[MinValueValidator(Decimal('0.01'))] # 
+    )
+    tiempo_estimado= models.DecimalField( 
+        max_digits=12, 
+        decimal_places=2, 
+        validators=[MinValueValidator(Decimal('0.01'))] # 
+    )
+
+def __str__(self):
+    return f"Ruta {self.id_ruta}: {self.origen} -> {self.destino}"
+            
