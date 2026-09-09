@@ -15,6 +15,21 @@ class Administrador(models.Model):
     telefono=models.CharField(max_length=20)
     dni=models.PositiveIntegerField()
 
+def __str__(self): #con lo que identificas la clase
+    return f"{self.nombre} {self.apellido}"
+
+class Conductor(models.Model):
+    id_conductor=models.IntegerField(primary_key=True)
+    nombre=models.CharField(max_length=30)
+    apellido=models.CharField(max_length=30)
+    mail=models.CharField(max_length=254)
+    telefono=models.CharField(max_length=20)
+    dni=models.PositiveIntegerField()
+    tipo_licencia = models.CharField(max_length=10)
+
+def __str__(self): 
+    return f"{self.nombre} {self.apellido}"
+
 class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada atributo de esta clase se convertirá en una columna de esa tabla
     patente=models.CharField(max_length=7,primary_key=True)
     tipo=models.CharField(max_length=50)
@@ -27,7 +42,14 @@ class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada
         decimal_places=2, 
         validators=[MinValueValidator(Decimal('0.01'))] # 
     )
-    #falta id admin e id conductor
+    id_admins=models.ManyToManyField(Administrador,blank=True)#al registrar un vehículo, no es obligatorio asignarle un administrador en el formulario se puede dsp por eso blank true
+    id_conductor = models.ForeignKey(
+    Conductor, 
+    on_delete=models.SET_NULL, 
+    null=True, #bd puede gusardar vacio
+    blank=True #podes no asignarle conductor al auto ni bine lo registras
+    )
+    #uno a muchos, FK. la clase que escribe es la que apunta a lo que esta dentro de fk
 
 def __str__(self):
     return f"{self.pantente} - {self.modelo}"
