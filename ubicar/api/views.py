@@ -1,7 +1,19 @@
 #view se encarga del CRUD del modelo ubicar vehiculo
 from rest_framework import viewsets
 from ubicar.models import Vehiculo
+from ubicar.models import Administrador
+from ubicar.models import Conductor
 from ubicar.api.serializer import VehiculoSerializer
+from ubicar.api.serializer import AdministradorSerializer
+from ubicar.api.serializer import ConductorSerializer
 class VehiculoViewsSet(viewsets.ModelViewSet):
     queryset= Vehiculo.objects.all()
     serializer_class=VehiculoSerializer
+
+class AdministradorViewsSet(viewsets.ModelViewSet):
+    queryset=Administrador.objects.all()
+    serializer_class=AdministradorSerializer
+
+class ConductorViewsSet(viewsets.ModelViewSet):
+    queryset= Conductor.objects.all()
+    serializer_class= ConductorSerializer
