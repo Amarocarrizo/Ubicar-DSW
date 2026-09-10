@@ -4,6 +4,7 @@ from ubicar.models import Vehiculo
 from ubicar.models import Administrador
 from ubicar.models import Conductor
 from ubicar.models import Ruta
+from ubicar.models import Posicion
 
 from ubicar.api.serializer import VehiculoSerializer
 from ubicar.api.serializer import AdministradorSerializer
@@ -24,3 +25,7 @@ class ConductorViewsSet(viewsets.ModelViewSet):
 class RutaViewsSet(viewsets.ModelViewSet):
     queryset= Ruta.objects.all()
     serializer_class= RutaSerializer
+
+class PosicionViewsSet(viewsets.ModelViewSet):
+    queryset= Posicion.objects.all()
+    serializer_class= PosicionSerializer

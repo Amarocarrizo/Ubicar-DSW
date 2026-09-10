@@ -72,4 +72,23 @@ class Ruta(models.Model):
 
 def __str__(self):
     return f"Ruta {self.id_ruta}: {self.origen} -> {self.destino}"
-            
+
+class Posicion(models.Model):
+    id_posicion = models.IntegerField(primary_key=True)
+    posicion_x= models.DecimalField( 
+            max_digits=12, 
+            decimal_places=2, 
+            validators=[MinValueValidator(Decimal('0.01'))]  
+        )
+    posicion_y= models.DecimalField( 
+                max_digits=12, 
+                decimal_places=2, 
+                validators=[MinValueValidator(Decimal('0.01'))]  
+            )
+    hora = models.DateTimeField()
+    id_viaje = models.ForeignKey(
+        Viaje, 
+        on_delete=models.SET_NULL, 
+        null=True, #bd puede guardar vacio
+        blank=True #podes no asignarle conductor al auto ni bien lo registras
+        )
