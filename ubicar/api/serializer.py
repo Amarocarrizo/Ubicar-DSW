@@ -4,6 +4,7 @@ from ubicar.models import Vehiculo
 from ubicar.models import Administrador
 from ubicar.models import Conductor
 from ubicar.models import Ruta
+from ubicar.models import Posicion
 
 class VehiculoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -24,3 +25,10 @@ class RutaSerializer(serializers.ModelSerializer):
     class Meta:
         model= Ruta
         fields= '__all__'
+
+class PosicionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model= Posicion
+        fields= '__all__'
+
+

@@ -73,6 +73,14 @@ class Ruta(models.Model):
 def __str__(self):
     return f"Ruta {self.id_ruta}: {self.origen} -> {self.destino}"
 
+class Viaje(models.Model):
+    id_viaje = models.IntegerField(primary_key=True)
+    estado = models.CharField(max_length=100)
+    hora_inicio = models.DateTimeField()
+    hora_llegada = models.DateTimeField()
+    
+
+
 class Posicion(models.Model):
     id_posicion = models.IntegerField(primary_key=True)
     posicion_x= models.DecimalField( 
@@ -92,3 +100,6 @@ class Posicion(models.Model):
         null=True, #bd puede guardar vacio
         blank=True #podes no asignarle conductor al auto ni bien lo registras
         )
+
+def __str__(self):
+    return f"Posicion: {self.posicion_x} {self.posicion_y}"
