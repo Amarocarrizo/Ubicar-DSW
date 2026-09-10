@@ -78,8 +78,9 @@ class Viaje(models.Model):
     estado = models.CharField(max_length=100)
     hora_inicio = models.DateTimeField()
     hora_llegada = models.DateTimeField()
-    
 
+def __str__(self):
+    return f"Viaje: {self.id_viaje}"
 
 class Posicion(models.Model):
     id_posicion = models.IntegerField(primary_key=True)

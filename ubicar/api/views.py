@@ -5,11 +5,16 @@ from ubicar.models import Administrador
 from ubicar.models import Conductor
 from ubicar.models import Ruta
 from ubicar.models import Posicion
+from ubicar.models import Viaje
+
 
 from ubicar.api.serializer import VehiculoSerializer
 from ubicar.api.serializer import AdministradorSerializer
 from ubicar.api.serializer import ConductorSerializer
 from ubicar.api.serializer import RutaSerializer
+from ubicar.api.serializer import ViajeSerializer
+from ubicar.api.serializer import PosicionSerializer
+
 class VehiculoViewsSet(viewsets.ModelViewSet):
     queryset= Vehiculo.objects.all()
     serializer_class=VehiculoSerializer
@@ -25,6 +30,10 @@ class ConductorViewsSet(viewsets.ModelViewSet):
 class RutaViewsSet(viewsets.ModelViewSet):
     queryset= Ruta.objects.all()
     serializer_class= RutaSerializer
+
+class ViajeViewsSet(viewsets.ModelViewSet):
+    queryset= Viaje.objects.all()
+    serializer_class= ViajeSerializer    
 
 class PosicionViewsSet(viewsets.ModelViewSet):
     queryset= Posicion.objects.all()
