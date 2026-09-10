@@ -3,9 +3,12 @@ from rest_framework import viewsets
 from ubicar.models import Vehiculo
 from ubicar.models import Administrador
 from ubicar.models import Conductor
+from ubicar.models import Ruta
+
 from ubicar.api.serializer import VehiculoSerializer
 from ubicar.api.serializer import AdministradorSerializer
 from ubicar.api.serializer import ConductorSerializer
+from ubicar.api.serializer import RutaSerializer
 class VehiculoViewsSet(viewsets.ModelViewSet):
     queryset= Vehiculo.objects.all()
     serializer_class=VehiculoSerializer
@@ -17,3 +20,7 @@ class AdministradorViewsSet(viewsets.ModelViewSet):
 class ConductorViewsSet(viewsets.ModelViewSet):
     queryset= Conductor.objects.all()
     serializer_class= ConductorSerializer
+
+class RutaViewsSet(viewsets.ModelViewSet):
+    queryset= Ruta.objects.all()
+    serializer_class= RutaSerializer
