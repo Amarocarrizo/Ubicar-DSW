@@ -78,6 +78,25 @@ class Viaje(models.Model):
     estado = models.CharField(max_length=100)
     hora_inicio = models.DateTimeField()
     hora_llegada = models.DateTimeField()
+    id_conductor = models.ForeignKey(
+        Conductor, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True 
+    )
+    id_ruta = models.ForeignKey(
+        Ruta, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True 
+        )
+
+    id_patente = models.ForeignKey(
+        Vehiculo.patente, 
+        on_delete=models.SET_NULL, 
+        null=True, #bd puede gusardar vacio
+        blank=True #podes no asignarle conductor al auto ni bine lo registras
+        )
 
 def __str__(self):
     return f"Viaje: {self.id_viaje}"
