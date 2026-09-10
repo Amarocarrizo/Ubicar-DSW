@@ -92,7 +92,7 @@ class Viaje(models.Model):
         )
 
     id_patente = models.ForeignKey(
-        Vehiculo.patente, 
+        Vehiculo, 
         on_delete=models.SET_NULL, 
         null=True, #bd puede gusardar vacio
         blank=True #podes no asignarle conductor al auto ni bine lo registras
