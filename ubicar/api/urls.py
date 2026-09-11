@@ -5,6 +5,7 @@ from ubicar.api.views import ConductorViewsSet
 from ubicar.api.views import RutaViewsSet
 from ubicar.api.views import PosicionViewsSet
 from ubicar.api.views import ViajeViewsSet
+from ubicar.api.views import GastoViewsSet
 
 
 router= DefaultRouter()
@@ -14,6 +15,7 @@ router.register('conductores',ConductorViewsSet,basename='conductor')
 router.register('ruta',RutaViewsSet,basename='ruta')
 router.register('posicion',PosicionViewsSet,basename='posicion')
 router.register('viaje',ViajeViewsSet,basename='viaje')
+router.register('gasto',GastoViewsSet,basename='gasto')
 
 urlpatterns=router.urls
 

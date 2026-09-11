@@ -123,3 +123,35 @@ class Posicion(models.Model):
 
 def __str__(self):
     return f"Posicion: {self.posicion_x} {self.posicion_y}"
+
+class Gasto(models.Model):
+    idGasto = models.IntegerField(primary_key=True)
+    tipo = models.CharField(max_length=20)
+    monto = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))]
+    )
+    comprobante = models.CharField(max_length=250)
+    fechaYHora = models.DateTimeField()
+    estado = models.CharField(max_length=15)
+    kmRegistrado = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00'))]
+    )
+
+    viaje = models.ForeignKey(
+        Viaje,
+        on_delete=models.CASCADE
+    )
+
+    administrador = models.ForeignKey(
+        Administrador,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    def __str__(self):
+        return f"Gasto {self.idGasto} - {self.tipo} - ${self.monto}"

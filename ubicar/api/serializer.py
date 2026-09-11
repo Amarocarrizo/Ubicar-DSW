@@ -6,7 +6,7 @@ from ubicar.models import Conductor
 from ubicar.models import Ruta
 from ubicar.models import Posicion
 from ubicar.models import Viaje
-
+from ubicar.models import Gasto
 
 class VehiculoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,4 +37,9 @@ class PosicionSerializer(serializers.ModelSerializer):
 class ViajeSerializer(serializers.ModelSerializer):
     class Meta:
         model= Viaje
+        fields= '__all__'
+
+class GastoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model= Gasto
         fields= '__all__'
