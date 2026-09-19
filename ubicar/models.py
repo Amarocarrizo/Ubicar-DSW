@@ -176,7 +176,7 @@ class Gasto(models.Model):
 
     def aprobar(self, administrador):
         self.estado = 'APROBADO'
-        self.administrador = administrador
+        self.administrador = administrador #asocia gasto al admin
         self.save()
 
     def rechazar(self, administrador):
