@@ -8,7 +8,7 @@ from decimal import Decimal
 #arrancar con las clases independientes para no hacer una dependiente sin haber declarado de la que depende
 
 class Administrador(models.Model):
-    id_admin=models.IntegerField(primary_key=True)
+    id_admin=models.AutoField(primary_key=True)
     nombre=models.CharField(max_length=30)
     apellido=models.CharField(max_length=30)
     mail=models.CharField(max_length=254)
@@ -19,7 +19,7 @@ class Administrador(models.Model):
         return f"{self.nombre} {self.apellido}"
 
 class Conductor(models.Model):
-    id_conductor=models.IntegerField(primary_key=True)
+    id_conductor=models.AutoField(primary_key=True)
     nombre=models.CharField(max_length=30)
     apellido=models.CharField(max_length=30)
     mail=models.CharField(max_length=254)
@@ -56,7 +56,7 @@ class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada
 
 
 class Ruta(models.Model):
-    id_ruta = models.IntegerField(primary_key=True)
+    id_ruta = models.AutoField(primary_key=True)
     origen=models.CharField(max_length=100)
     destino=models.CharField(max_length=100)
     distancia_estimada= models.DecimalField( 
@@ -74,7 +74,7 @@ class Ruta(models.Model):
         return f"Ruta {self.id_ruta}: {self.origen} -> {self.destino}"
 
 class Viaje(models.Model):
-    id_viaje = models.IntegerField(primary_key=True)
+    id_viaje = models.AutoField(primary_key=True)
     estado = models.CharField(max_length=100)
     hora_inicio = models.DateTimeField()
     hora_llegada = models.DateTimeField()
@@ -102,16 +102,14 @@ class Viaje(models.Model):
         return f"Viaje: {self.id_viaje}"
 
 class Posicion(models.Model):
-    id_posicion = models.IntegerField(primary_key=True)
+    id_posicion = models.AutoField(primary_key=True)
     posicion_x= models.DecimalField( 
             max_digits=12, 
-            decimal_places=2, 
-            validators=[MinValueValidator(Decimal('0.01'))]  
+            decimal_places=6
         )
     posicion_y= models.DecimalField( 
                 max_digits=12, 
-                decimal_places=2, 
-                validators=[MinValueValidator(Decimal('0.01'))]  
+                decimal_places=6
             )
     hora = models.DateTimeField()
     id_viaje = models.ForeignKey(
@@ -125,17 +123,17 @@ class Posicion(models.Model):
         return f"Posicion: {self.posicion_x} {self.posicion_y}"
 
 class Gasto(models.Model):
-    idGasto = models.IntegerField(primary_key=True)
+    id_gasto = models.AutoField(primary_key=True)
     tipo = models.CharField(max_length=20)
     monto = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0.01'))]
     )
-    comprobante = models.CharField(max_length=250)
-    fechaYHora = models.DateTimeField()
+    comprobante = models.FileField(upload_to='comprobantes/')
+    fecha_hora = models.DateTimeField()
     estado = models.CharField(max_length=15)
-    kmRegistrado = models.DecimalField(
+    km_registrado = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0.00'))]
@@ -154,4 +152,4 @@ class Gasto(models.Model):
     )
 
     def __str__(self):
-        return f"Gasto {self.idGasto} - {self.tipo} - ${self.monto}"
+        return f"Gasto {self.id_gasto} - {self.tipo} - ${self.monto}"
