@@ -15,8 +15,8 @@ class Administrador(models.Model):
     telefono=models.CharField(max_length=20)
     dni=models.PositiveIntegerField()
 
-def __str__(self): #con lo que identificas la clase
-    return f"{self.nombre} {self.apellido}"
+    def __str__(self): #con lo que identificas la clase
+        return f"{self.nombre} {self.apellido}"
 
 class Conductor(models.Model):
     id_conductor=models.IntegerField(primary_key=True)
@@ -27,8 +27,8 @@ class Conductor(models.Model):
     dni=models.PositiveIntegerField()
     tipo_licencia = models.CharField(max_length=10)
 
-def __str__(self): 
-    return f"{self.nombre} {self.apellido}"
+    def __str__(self): 
+        return f"{self.nombre} {self.apellido}"
 
 class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada atributo de esta clase se convertirá en una columna de esa tabla
     patente=models.CharField(max_length=7,primary_key=True)
@@ -51,8 +51,8 @@ class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada
     )
     #uno a muchos, FK. la clase que escribe es la que apunta a lo que esta dentro de fk
 
-def __str__(self):
-    return f"{self.pantente} - {self.modelo}"
+    def __str__(self):
+        return f"{self.patente} - {self.modelo}"
 
 
 class Ruta(models.Model):
@@ -70,8 +70,8 @@ class Ruta(models.Model):
         validators=[MinValueValidator(Decimal('0.01'))] # 
     )
 
-def __str__(self):
-    return f"Ruta {self.id_ruta}: {self.origen} -> {self.destino}"
+    def __str__(self):
+        return f"Ruta {self.id_ruta}: {self.origen} -> {self.destino}"
 
 class Viaje(models.Model):
     id_viaje = models.IntegerField(primary_key=True)
@@ -98,8 +98,8 @@ class Viaje(models.Model):
         blank=True #podes no asignarle conductor al auto ni bine lo registras
         )
 
-def __str__(self):
-    return f"Viaje: {self.id_viaje}"
+    def __str__(self):
+        return f"Viaje: {self.id_viaje}"
 
 class Posicion(models.Model):
     id_posicion = models.IntegerField(primary_key=True)
@@ -121,5 +121,5 @@ class Posicion(models.Model):
         blank=True #podes no asignarle conductor al auto ni bien lo registras
         )
 
-def __str__(self):
-    return f"Posicion: {self.posicion_x} {self.posicion_y}"
+    def __str__(self):
+        return f"Posicion: {self.posicion_x} {self.posicion_y}"
