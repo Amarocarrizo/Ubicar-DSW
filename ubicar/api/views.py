@@ -7,7 +7,9 @@ from ubicar.models import Ruta
 from ubicar.models import Posicion
 from ubicar.models import Viaje
 from ubicar.models import Gasto
-
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.utils import timezone
 
 from ubicar.api.serializer import VehiculoSerializer
 from ubicar.api.serializer import AdministradorSerializer
@@ -35,7 +37,16 @@ class RutaViewsSet(viewsets.ModelViewSet):
 
 class ViajeViewsSet(viewsets.ModelViewSet):
     queryset= Viaje.objects.all()
-    serializer_class= ViajeSerializer    
+    serializer_class= ViajeSerializer  
+    @action (detail=True,methods=['post'])
+    def iniciar(self,request,pk=None):
+        viaje=self.get_object()
+
+        viaje.estado='EN CURSO'
+        viaje.hora_inicio= timezone.now()
+        viaje.save()
+
+        return Response({'mensaje':'Viaje iniciado correctamente'})  
 
 class PosicionViewsSet(viewsets.ModelViewSet):
     queryset= Posicion.objects.all()
@@ -44,3 +55,5 @@ class PosicionViewsSet(viewsets.ModelViewSet):
 class GastoViewsSet(viewsets.ModelViewSet):
     queryset= Gasto.objects.all()
     serializer_class= GastoSerializer
+
+
