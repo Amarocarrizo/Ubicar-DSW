@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 #para que acepte float positivos
 from django.core.validators import MinValueValidator
@@ -76,8 +77,8 @@ class Ruta(models.Model):
 class Viaje(models.Model):
     id_viaje = models.AutoField(primary_key=True)
     estado = models.CharField(max_length=100)
-    hora_inicio = models.DateTimeField()
-    hora_llegada = models.DateTimeField()
+    hora_inicio = models.DateTimeField(null=True, blank=True)
+    hora_llegada = models.DateTimeField(null=True, blank=True)
     id_conductor = models.ForeignKey(
         Conductor, 
         on_delete=models.SET_NULL, 
@@ -100,6 +101,25 @@ class Viaje(models.Model):
 
     def __str__(self):
         return f"Viaje: {self.id_viaje}"
+
+    def iniciar_viaje(self, latitud_inicial, longitud_inicial):
+        self.estado = 'EN_CURSO'
+        self.hora_inicio = timezone.now()
+        self.save()
+        self.registrar_posicion(latitud_inicial, longitud_inicial)
+
+    def registrar_posicion(self, latitud, longitud):
+        return Posicion.objects.create(
+            id_viaje=self,
+            posicion_x=latitud,
+            posicion_y=longitud,
+            hora=timezone.now()
+        )
+
+    def finalizar_viaje(self):
+        self.estado = 'FINALIZADO'
+        self.hora_llegada = timezone.now()
+        self.save()
 
 class Posicion(models.Model):
     id_posicion = models.AutoField(primary_key=True)
@@ -153,3 +173,13 @@ class Gasto(models.Model):
 
     def __str__(self):
         return f"Gasto {self.id_gasto} - {self.tipo} - ${self.monto}"
+
+    def aprobar(self, administrador):
+        self.estado = 'APROBADO'
+        self.administrador = administrador #asocia gasto al admin
+        self.save()
+
+    def rechazar(self, administrador):
+        self.estado = 'RECHAZADO'
+        self.administrador = administrador
+        self.save()
