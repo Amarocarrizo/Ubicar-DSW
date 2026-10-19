@@ -43,13 +43,19 @@ class ViajeViewsSet(viewsets.ModelViewSet):
     @action (detail=True,methods=['post'])
     def iniciar(self,request,pk=None):
         viaje=self.get_object()
+        try:
+            viaje.iniciar_viaje()
 
-        viaje.estado='EN CURSO'
-        viaje.hora_inicio= timezone.now()
-        viaje.save()
+            return Response({
+                'mensaje': 'Viaje iniciado correctamente'
+            })
 
-        return Response({'mensaje':'Viaje iniciado correctamente'})  
-
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
 class PosicionViewsSet(viewsets.ModelViewSet):
     queryset= Posicion.objects.all()
     serializer_class= PosicionSerializer
