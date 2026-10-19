@@ -44,13 +44,11 @@ class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada
         validators=[MinValueValidator(Decimal('0.01'))] # 
     )
     id_admins=models.ManyToManyField(Administrador,blank=True)#al registrar un vehículo, no es obligatorio asignarle un administrador en el formulario se puede dsp por eso blank true
-    id_conductor = models.ForeignKey(
+    id_conductor = models.ManyToManyField(
     Conductor, 
-    on_delete=models.SET_NULL, 
-    null=True, #bd puede gusardar vacio
     blank=True #podes no asignarle conductor al auto ni bine lo registras
     )
-    #uno a muchos, FK. la clase que escribe es la que apunta a lo que esta dentro de fk
+    #muchos a muchos, FK. la clase que escribe es la que apunta a lo que esta dentro de fk
 
     def __str__(self):
         return f"{self.patente} - {self.modelo}"
@@ -87,9 +85,7 @@ class Viaje(models.Model):
     )
     id_ruta = models.ForeignKey(
         Ruta, 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True 
+        on_delete=models.PROTECT #todo viaje debe tener una ruta, obligatoriamente 
         )
 
     id_patente = models.ForeignKey(
@@ -134,9 +130,7 @@ class Posicion(models.Model):
     hora = models.DateTimeField()
     id_viaje = models.ForeignKey(
         Viaje, 
-        on_delete=models.SET_NULL, 
-        null=True, #bd puede guardar vacio
-        blank=True #podes no asignarle conductor al auto ni bien lo registras
+        on_delete=models.CASCADE  #si elimino el viaje, se eliminan sus posiciones
         )
 
     def __str__(self):
@@ -150,9 +144,16 @@ class Gasto(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0.01'))]
     )
+    ESTADOS = [
+        ('NUEVO', 'Nuevo'),
+        ('A_REVISAR', 'A revisar'),
+        ('APROBADO', 'Aprobado'),
+        ('RECHAZADO', 'Rechazado'),
+    ] #agrego posibles choices de un gasto
+
     comprobante = models.FileField(upload_to='comprobantes/')
-    fecha_hora = models.DateTimeField()
-    estado = models.CharField(max_length=15)
+    fecha_hora = models.DateTimeField(default= timezone.now)
+    estado = models.CharField(max_length=15,choices=ESTADOS,default='NUEVO')
     km_registrado = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -183,3 +184,25 @@ class Gasto(models.Model):
         self.estado = 'RECHAZADO'
         self.administrador = administrador
         self.save()
+
+class Alerta(models.Model):
+    id_alerta = models.AutoField(primary_key=True)
+    tipo = models.CharField(max_length=30)
+    descripcion = models.CharField(max_length=250)
+    fecha_hora = models.DateTimeField(default=timezone.now)
+    estado = models.CharField(max_length=20, default='PENDIENTE')
+
+    viaje = models.ForeignKey(
+        Viaje,
+        on_delete=models.CASCADE
+    )
+
+    administrador = models.ForeignKey(
+        Administrador,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    def __str__(self):
+        return f"Alerta {self.id_alerta} - {self.tipo}"
