@@ -7,6 +7,7 @@ from ubicar.models import Ruta
 from ubicar.models import Posicion
 from ubicar.models import Viaje
 from ubicar.models import Gasto
+from ubicar.models import Alerta
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
@@ -18,6 +19,7 @@ from ubicar.api.serializer import RutaSerializer
 from ubicar.api.serializer import ViajeSerializer
 from ubicar.api.serializer import PosicionSerializer
 from ubicar.api.serializer import GastoSerializer
+from ubicar.api.serializer import AlertaSerializer
 
 class VehiculoViewsSet(viewsets.ModelViewSet):
     queryset= Vehiculo.objects.all()
@@ -56,4 +58,6 @@ class GastoViewsSet(viewsets.ModelViewSet):
     queryset= Gasto.objects.all()
     serializer_class= GastoSerializer
 
-
+class AlertaViewsSet(viewsets.ModelViewSet):
+    queryset= Alerta.objects.all()
+    serializer_class= AlertaSerializer
