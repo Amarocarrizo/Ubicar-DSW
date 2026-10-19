@@ -99,10 +99,22 @@ class Viaje(models.Model):
         return f"Viaje: {self.id_viaje}"
 
     def iniciar_viaje(self, latitud_inicial, longitud_inicial):
-        self.estado = 'EN_CURSO'
-        self.hora_inicio = timezone.now()
-        self.save()
-        self.registrar_posicion(latitud_inicial, longitud_inicial)
+         if self.estado == 'EN CURSO':
+           raise ValueError('El viaje ya está en curso')
+
+         if self.id_conductor is None:
+          raise ValueError('El viaje no tiene conductor asignado')
+
+         if self.id_patente is None:
+          raise ValueError('El viaje no tiene vehículo asignado')
+
+         if self.id_ruta is None:
+          raise ValueError('El viaje no tiene ruta asignada')
+ 
+         self.estado = 'EN_CURSO'
+         self.hora_inicio = timezone.now()
+         self.save()
+         self.registrar_posicion(latitud_inicial, longitud_inicial)
 
     def registrar_posicion(self, latitud, longitud):
         return Posicion.objects.create(
@@ -113,6 +125,10 @@ class Viaje(models.Model):
         )
 
     def finalizar_viaje(self):
+        if self.estado != 'EN_CURSO':
+           raise ValueError(
+            'Solo se puede finalizar un viaje que esté en curso'
+            )
         self.estado = 'FINALIZADO'
         self.hora_llegada = timezone.now()
         self.save()
