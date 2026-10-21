@@ -162,7 +162,7 @@ class Viaje(models.Model):
     def __str__(self):
         return f"Viaje: {self.id_viaje}"
 
-    def iniciar_viaje(self, latitud_inicial, longitud_inicial):
+    def iniciar_viaje(self, latitud_inicial=None, longitud_inicial=None):
          if self.estado.estado == 'EN CURSO':
            raise ValueError('El viaje ya está en curso')
 
@@ -187,11 +187,20 @@ class Viaje(models.Model):
             raise ValueError(
         'El vehículo no está habilitado para este conductor'
          )
- 
-         self.estado.estado = 'EN_CURSO'
+
+         estado_en_curso = EstadoViaje.objects.get(
+          estado='EN_CURSO'
+        )
+
+         self.estado = estado_en_curso
          self.hora_inicio = timezone.now()
          self.save()
-         self.registrar_posicion(latitud_inicial, longitud_inicial)
+ 
+         #self.estado.estado = 'EN_CURSO'
+         #self.hora_inicio = timezone.now()
+         #self.save()
+         if latitud_inicial is not None and longitud_inicial is not None:
+          self.registrar_posicion(latitud_inicial, longitud_inicial)
 
     def registrar_posicion(self, latitud, longitud):
         return Posicion.objects.create(

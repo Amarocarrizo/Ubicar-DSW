@@ -8,9 +8,11 @@ from ubicar.models import Posicion
 from ubicar.models import Viaje
 from ubicar.models import Gasto
 from ubicar.models import Alerta
+from ubicar.models import AsignacionVehiculo
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from rest_framework import status
 
 from ubicar.api.serializer import VehiculoSerializer
 from ubicar.api.serializer import AdministradorSerializer
@@ -20,6 +22,7 @@ from ubicar.api.serializer import ViajeSerializer
 from ubicar.api.serializer import PosicionSerializer
 from ubicar.api.serializer import GastoSerializer
 from ubicar.api.serializer import AlertaSerializer
+from ubicar.api.serializer import AsignacionVehiculoSerializer
 
 class VehiculoViewsSet(viewsets.ModelViewSet):
     queryset= Vehiculo.objects.all()
@@ -28,6 +31,10 @@ class VehiculoViewsSet(viewsets.ModelViewSet):
 class AdministradorViewsSet(viewsets.ModelViewSet):
     queryset=Administrador.objects.all()
     serializer_class=AdministradorSerializer
+
+class AsignacionVehiculoViewSet(viewsets.ModelViewSet):
+    queryset = AsignacionVehiculo.objects.all()
+    serializer_class = AsignacionVehiculoSerializer
 
 class ConductorViewsSet(viewsets.ModelViewSet):
     queryset= Conductor.objects.all()
