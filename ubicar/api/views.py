@@ -1,5 +1,5 @@
 #view se encarga del CRUD del modelo ubicar vehiculo
-from rest_framework import viewsets
+from rest_framework import viewsets, status
 from ubicar.models import Vehiculo
 from ubicar.models import Administrador
 from ubicar.models import Conductor
@@ -40,21 +40,23 @@ class RutaViewsSet(viewsets.ModelViewSet):
 class ViajeViewsSet(viewsets.ModelViewSet):
     queryset= Viaje.objects.all()
     serializer_class= ViajeSerializer  
-    @action (detail=True,methods=['post'])
-    def iniciar(self,request,pk=None):
-        viaje=self.get_object()
-        try:
-            viaje.iniciar_viaje()
+    @action(detail=True, methods=['post'])
+    def iniciar(self, request, pk=None):
+        viaje = self.get_object()
+        latitud = request.data.get('latitud')
+        longitud = request.data.get('longitud')
 
-            return Response({
-                'mensaje': 'Viaje iniciado correctamente'
-            })
-
-        except ValueError as e:
+        if latitud is None or longitud is None:
             return Response(
-                {'error': str(e)},
+                {'error': 'Debe enviar latitud y longitud iniciales'},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        try:
+            viaje.iniciar_viaje(latitud, longitud)
+            return Response({'mensaje': 'Viaje iniciado correctamente'})
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     
 class PosicionViewsSet(viewsets.ModelViewSet):
     queryset= Posicion.objects.all()
@@ -67,3 +69,4 @@ class GastoViewsSet(viewsets.ModelViewSet):
 class AlertaViewsSet(viewsets.ModelViewSet):
     queryset= Alerta.objects.all()
     serializer_class= AlertaSerializer
+

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoreo de Flota - Ubicar</title>
+
+    <!-- CSS de Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <!-- Estilo para que el mapa tenga altura visible -->
+    <style>
+        #map {
+            width: 100%;
+            height: 500px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Monitoreo de Rutas</h2>
+    <div id="map"></div>
+    <br>
+
+    <label>Localidad Partida</label>
+    <input id="buscadorO" type="text" />
+    <button id="origen">Origen</button>
+    <br><br>
+
+    <label>Localidad Destino</label>
+    <input id="buscadorD" type="text" />
+    <button id="destino">Destino</button>
+    <br><br>
+
+    <button id="boton">Calcular</button>
+
+    <!-- Librerías JS de Leaflet y Turf -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+
+    <!-- Lógica del Mapa en vivo -->
+    <script>
+        var map = L.map('map').setView([-34.16327, -58.95919], 13);
+
+       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri &mdash; OpenStreetMap'
+}).addTo(map);
+
+        let marcadorActualO = null;
+        let marcadorActualD = null;
+
+        let buscadorO = document.getElementById('buscadorO');
+        let buscadorD = document.getElementById('buscadorD');
+        let origen = document.getElementById('origen');
+        let destino = document.getElementById('destino');
+
+        origen.addEventListener("click", async function () {
+            let busqueda = buscadorO.value.trim();
+            let resultado = await getInfo(busqueda);
+            if (resultado && resultado.length > 0) {
+                actualizarMarcadorO(resultado[0]);
+            } else {
+                alert("No existe la localidad");
+            }
+        });
+
+        destino.addEventListener("click", async function () {
+            let busqueda = buscadorD.value.trim();
+            let resultado = await getInfo(busqueda);
+            if (resultado && resultado.length > 0) {
+                actualizarMarcadorD(resultado[0]);
+            } else {
+                alert("No existe la localidad");
+            }
+        });
+
+        const getInfo = async (a) => {
+            let peticion = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(a)} , Buenos Aires&format=json&limit=1`);
+            return await peticion.json();
+        };
+
+        const actualizarMarcadorO = (json) => {
+            let nombre = json.display_name;
+            let latitud = parseFloat(json.lat);
+            let longitud = parseFloat(json.lon);
+
+            map.setView([latitud, longitud], 10);
+            if (marcadorActualO) map.removeLayer(marcadorActualO);
+            marcadorActualO = L.marker([latitud, longitud]).addTo(map).bindPopup(nombre).openPopup();
+        };
+
+        const actualizarMarcadorD = (json) => {
+            let nombre = json.display_name;
+            let latitud = parseFloat(json.lat);
+            let longitud = parseFloat(json.lon);
+
+            map.setView([latitud, longitud], 10);
+            if (marcadorActualD) map.removeLayer(marcadorActualD);
+            marcadorActualD = L.marker([latitud, longitud]).addTo(map).bindPopup(nombre).openPopup();
+        };
+    </script>
+</body>
+
+</html>
