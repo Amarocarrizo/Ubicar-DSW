@@ -1,9 +1,11 @@
 from django.db import models
 from django.utils import timezone
+from django.contrib.auth.models import User
 
 #para que acepte float positivos
 from django.core.validators import MinValueValidator
 from decimal import Decimal
+from math import radians, sin, cos, sqrt, atan2
 # Create your models here.
 
 #arrancar con las clases independientes para no hacer una dependiente sin haber declarado de la que depende
@@ -19,43 +21,38 @@ class Administrador(models.Model):
     def __str__(self): #con lo que identificas la clase
         return f"{self.nombre} {self.apellido}"
 
-class Licencia(models.Model):
-    id_Licencia= models.AutoField(primary_key=True)
-    LICENCIA = [
-        ('A1', 'A1'),
-        ('B1', 'B1'),
-        ('C1', 'C1'),
-        ('C2', 'C2'),
-        ('C3', 'C3'),
-    ]
-    tipo_De_Licencia= models.CharField(max_length=3,choices=LICENCIA)
-    def __str__(self):
-      return self.tipo_De_Licencia
-
+class Licencia(models.TextChoices):
+     A1="A1", "A1"
+     B1="B1","B1"
+     C1= "C1", "C1"
+     C2="C2", "C2"
+     C3="C3", "C3"
+      
 class Conductor(models.Model):
     id_conductor=models.AutoField(primary_key=True)
+    usuario = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='conductor',
+        null=True,
+        blank=True
+    )
     nombre=models.CharField(max_length=30)
     apellido=models.CharField(max_length=30)
     mail=models.CharField(max_length=254)
     telefono=models.CharField(max_length=20)
     dni=models.PositiveIntegerField()
-    tipo_licencia = models.ForeignKey(Licencia, on_delete= models.PROTECT)
+    tipo_licencia = models.CharField(max_length=3,choices= Licencia.choices)
 
     def __str__(self): 
         return f"{self.nombre} {self.apellido}"
 
-class TipoDeVehiculo(models.Model):
-    idRodado=models.AutoField(primary_key=True)
-    VEHICULOS = [
-        ('AUTO', 'Auto'),
-        ('CAMIONETA', 'Camioneta'),
-        ('CAMION', 'Camion'),
-        ('MOTO', 'Moto'),
-    ] #agrego posibles choices de un vehiculo
-
-    tipoDeRodado=models.CharField(max_length=15,choices=VEHICULOS)
-    def __str__(self):
-      return self.tipoDeRodado
+class TipoDeVehiculo(models.TextChoices):
+        AUTO="AUTO", "Auto"
+        CAMIONETA="CAMIONETA", "Camioneta"
+        CAMION="CAMION", "Camion"
+        MOTO="MOTO", "Moto"
+    #agrego posibles choices de un vehiculo
 
 class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada atributo de esta clase se convertirá en una columna de esa tabla
     patente=models.CharField(max_length=7,primary_key=True)
@@ -64,7 +61,7 @@ class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada
     chasis=models.CharField(max_length=50,unique=True)
     kilometraje=models.PositiveIntegerField()
     estado=models.CharField(max_length=30)
-    tipo_de_vehiculo= models.ForeignKey(TipoDeVehiculo,on_delete=models.PROTECT ,null=True,blank=True)
+    tipo_de_vehiculo= models.CharField(max_length=20,choices=TipoDeVehiculo.choices)
     capacidad_carga = models.DecimalField( #para que acepte cualq numero positivo, 2 decimales
         max_digits=12, 
         decimal_places=2, 
@@ -116,29 +113,25 @@ class Ruta(models.Model):
         validators=[MinValueValidator(Decimal('0.01'))] # 
     )
 
+    # Atributo nuevo para guardar el vector/geometría de OSRM
+    geometria_ruta = models.JSONField(null=True, blank=True)
+
     def __str__(self):
         return f"Ruta {self.id_ruta}: {self.origen} -> {self.destino}"
 
-class EstadoViaje(models.Model):
-    id_estado = models.AutoField(primary_key=True)
-
-    ESTADOS = [
-        ('PENDIENTE', 'Pendiente'),
-        ('EN_CURSO', 'En curso'),
-        ('FINALIZADO', 'Finalizado'),
-    ]
-
-    estado = models.CharField(
-        max_length=20,
-        choices=ESTADOS
-    )
-
-    def __str__(self):
-        return self.estado
-    
+class EstadoViaje(models.TextChoices):
+       PENDIENTE= "PENDIENTE", "Pendiente"
+       EN_CURSO= "EN CURSO" , "En Curso"
+       CANCELADO= "CANCELADO" , "Cancelado"
+       FINALIZADO= "FINALIZADO" , "Finalizado" 
+  
 class Viaje(models.Model):
     id_viaje = models.AutoField(primary_key=True)
-    estado = models.ForeignKey(EstadoViaje,on_delete= models.PROTECT)
+    estado = models.CharField(
+      max_length=20,
+      choices=EstadoViaje.choices,
+      default=EstadoViaje.PENDIENTE,
+  )
     hora_inicio = models.DateTimeField(null=True, blank=True)
     hora_llegada = models.DateTimeField(null=True, blank=True)
     id_conductor = models.ForeignKey(
@@ -163,7 +156,7 @@ class Viaje(models.Model):
         return f"Viaje: {self.id_viaje}"
 
     def iniciar_viaje(self, latitud_inicial=None, longitud_inicial=None):
-         if self.estado.estado == 'EN CURSO':
+         if self.estado == EstadoViaje.EN_CURSO:
            raise ValueError('El viaje ya está en curso')
 
          if self.id_conductor is None:
@@ -188,11 +181,9 @@ class Viaje(models.Model):
         'El vehículo no está habilitado para este conductor'
          )
 
-         estado_en_curso = EstadoViaje.objects.get(
-          estado='EN_CURSO'
-        )
+         #estado_en_curso = EstadoViaje.objects.get(estado="EN CURSO")
 
-         self.estado = estado_en_curso
+         self.estado = EstadoViaje.EN_CURSO
          self.hora_inicio = timezone.now()
          self.save()
  
@@ -201,21 +192,80 @@ class Viaje(models.Model):
          #self.save()
          if latitud_inicial is not None and longitud_inicial is not None:
           self.registrar_posicion(latitud_inicial, longitud_inicial)
+    def _calcular_distancia_a_ruta(self, lat_actual, lon_actual):
+        """Calcula la distancia mínima en metros entre la posición actual 
+           y los puntos de la geometría de la ruta guardada en JSON.
+        """
+        if not self.id_ruta or not self.id_ruta.geometria_ruta:
+            return 0 # Si no hay ruta o geometría guardada, no hay desvío medible
+
+        geometria = self.id_ruta.geometria_ruta
+        coordenadas = []
+
+        # Dependiendo de cómo guardes el JSON de OSRM (GeoJSON o array de coords)
+        # Si guardas el GeoJSON de OSRM estándar (LineString), las coordenadas vienen como [lon, lat]
+        if isinstance(geometria, dict) and 'coordinates' in geometria:
+            coordenadas = geometria['coordinates'] # [[lon, lat], [lon, lat], ...]
+        elif isinstance(geometria, list):
+            coordenadas = geometria
+
+        min_distancia = float('inf')
+        lat1 = radians(float(lat_actual))
+        lon1 = radians(float(lon_actual))
+
+        # Radio de la Tierra en metros
+        R = 6371000 
+
+        for punto in coordenadas:
+            # OSRM guarda [longitud, latitud]
+            lon2 = radians(float(punto[0]))
+            lat2 = radians(float(punto[1]))
+
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+
+            a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+            c = 2 * atan2(sqrt(a), sqrt(1 - a))
+            distancia = R * c
+
+            if distancia < min_distancia:
+                min_distancia = distancia
+
+        return min_distancia # Retorna la distancia en metros al punto más cercano de la ruta
 
     def registrar_posicion(self, latitud, longitud):
-        return Posicion.objects.create(
+        # 1- Guardar la posición actual en la base de datos
+        posicion= Posicion.objects.create(
             id_viaje=self,
             posicion_x=latitud,
             posicion_y=longitud,
             hora=timezone.now()
         )
+        # 2- Verificar el desvío comparando con la ruta
+        UMBRAL_DESVIO_METROS = 200.0  # Margen permitido de desvío (ej: 200 metros)
+        distancia_al_camino = self._calcular_distancia_a_ruta(latitud, longitud)
+
+        if distancia_al_camino > UMBRAL_DESVIO_METROS:
+            # Buscar el tipo de alerta 'DESVIO'
+            Alerta.objects.create(
+            tipo=AlertaDefinida.DESVIO,
+            descripcion=f"El vehículo se desvió {round(distancia_al_camino, 2)} metros de la ruta planificada.",
+            estado='PENDIENTE',
+            viaje=self
+           )
+            self.estado = EstadoViaje.PENDIENTE
+            self.save()
+        else:
+           self.estado = EstadoViaje.EN_CURSO
+           self.save()
+        return posicion
 
     def finalizar_viaje(self):
-        if self.estado.estado != 'EN_CURSO':
+        if self.estado!= EstadoViaje.EN_CURSO:
            raise ValueError(
             'Solo se puede finalizar un viaje que esté en curso'
             )
-        self.estado.estado = 'FINALIZADO'
+        self.estado= EstadoViaje.FINALIZADO
         self.hora_llegada = timezone.now()
         self.save()
 
@@ -308,18 +358,13 @@ class Gasto(models.Model):
      self.administrador = administrador
      self.save()
 
-class AlertaDefinida(models.Model):
-    idAlerta=models.AutoField(primary_key=True)
-    TIPOALERTA= [
-        ('DESVIO','Desvio'),
-        ('TARDANZA','Tardanza'),
-    ]
-    tipo_de_alerta=models.CharField(max_length=15,choices=TIPOALERTA)
-
-
+class AlertaDefinida(models.TextChoices):
+        DESVIO="DESVIO","Desvio"
+        TARDANZA= "TARDANZA","Tardanza"
+    
 class Alerta(models.Model):
     id_alerta = models.AutoField(primary_key=True)
-    tipo = models.ForeignKey(AlertaDefinida, on_delete= models.PROTECT)
+    tipo = models.CharField(max_length=20 ,choices=AlertaDefinida.choices)
     descripcion = models.CharField(max_length=250)
     fecha_hora = models.DateTimeField(default=timezone.now)
     estado = models.CharField(max_length=20, default='PENDIENTE')
