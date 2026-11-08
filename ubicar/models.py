@@ -99,8 +99,8 @@ class Viaje(models.Model):
         return f"Viaje: {self.id_viaje}"
 
     def iniciar_viaje(self, latitud_inicial, longitud_inicial):
-         if self.estado == 'EN CURSO':
-           raise ValueError('El viaje ya está en curso')
+         if self.estado != 'ASIGNADO':
+          raise ValueError('Solo se puede iniciar un viaje que esté ASIGNADO')
 
          if self.id_conductor is None:
           raise ValueError('El viaje no tiene conductor asignado')
@@ -115,6 +115,14 @@ class Viaje(models.Model):
          self.hora_inicio = timezone.now()
          self.save()
          self.registrar_posicion(latitud_inicial, longitud_inicial)
+
+    def rechazar_viaje(self):
+        """El chofer rechaza el viaje asignado."""
+        if self.estado != 'ASIGNADO':
+            raise ValueError('Solo se puede rechazar un viaje que esté ASIGNADO')
+        
+        self.estado = 'RECHAZADO'
+        self.save()
 
     def registrar_posicion(self, latitud, longitud):
         return Posicion.objects.create(
