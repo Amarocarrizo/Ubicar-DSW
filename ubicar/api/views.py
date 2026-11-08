@@ -8,9 +8,13 @@ from ubicar.models import Posicion
 from ubicar.models import Viaje
 from ubicar.models import Gasto
 from ubicar.models import Alerta
+from ubicar.models import AsignacionVehiculo
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import serializers
 
 from ubicar.api.serializer import VehiculoSerializer
 from ubicar.api.serializer import AdministradorSerializer
@@ -20,6 +24,7 @@ from ubicar.api.serializer import ViajeSerializer
 from ubicar.api.serializer import PosicionSerializer
 from ubicar.api.serializer import GastoSerializer
 from ubicar.api.serializer import AlertaSerializer
+from ubicar.api.serializer import AsignacionVehiculoSerializer
 
 class VehiculoViewsSet(viewsets.ModelViewSet):
     queryset= Vehiculo.objects.all()
@@ -29,6 +34,10 @@ class AdministradorViewsSet(viewsets.ModelViewSet):
     queryset=Administrador.objects.all()
     serializer_class=AdministradorSerializer
 
+class AsignacionVehiculoViewSet(viewsets.ModelViewSet):
+    queryset = AsignacionVehiculo.objects.all()
+    serializer_class = AsignacionVehiculoSerializer
+
 class ConductorViewsSet(viewsets.ModelViewSet):
     queryset= Conductor.objects.all()
     serializer_class= ConductorSerializer
@@ -36,27 +45,105 @@ class ConductorViewsSet(viewsets.ModelViewSet):
 class RutaViewsSet(viewsets.ModelViewSet):
     queryset= Ruta.objects.all()
     serializer_class= RutaSerializer
-
 class ViajeViewsSet(viewsets.ModelViewSet):
-    queryset= Viaje.objects.all()
-    serializer_class= ViajeSerializer  
+    queryset = Viaje.objects.all()
+    serializer_class = ViajeSerializer
+    permission_classes = [IsAuthenticated]
+
+    def perform_create(self, serializer):
+        conductor = self.request.user.conductor
+
+        asignacion = AsignacionVehiculo.objects.filter(
+            conductor=conductor,
+            activa=True,
+            fecha_desde__lte=timezone.now().date(),
+            fecha_hasta__gte=timezone.now().date()
+        ).first()
+
+        if not asignacion:
+            raise serializers.ValidationError(
+                "El conductor no tiene un vehículo asignado actualmente"
+            )
+
+        serializer.save(
+            id_conductor=conductor,
+            id_patente=asignacion.vehiculo
+        )
+
     @action(detail=True, methods=['post'])
     def iniciar(self, request, pk=None):
+        viaje = self.get_object()
+
+        latitud = request.data.get('latitud')
+        longitud = request.data.get('longitud')
+
+        if latitud is None or longitud is None:
+            return Response(
+                {'error': 'Debe enviar latitud y longitud'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            viaje.iniciar_viaje(latitud, longitud)
+
+            return Response({
+                'mensaje': 'Viaje iniciado correctamente'
+            })
+
+        except ValueError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    @action(detail=True, methods=['post'])
+    def posicion(self, request, pk=None):
         viaje = self.get_object()
         latitud = request.data.get('latitud')
         longitud = request.data.get('longitud')
 
         if latitud is None or longitud is None:
             return Response(
-                {'error': 'Debe enviar latitud y longitud iniciales'},
+                {'error': 'Debe enviar latitud y longitud'},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
         try:
-            viaje.iniciar_viaje(latitud, longitud)
-            return Response({'mensaje': 'Viaje iniciado correctamente'})
-        except ValueError as e:
+            # Llama directamente al método que ya tenías programado en el modelo
+            posicion_registrada = viaje.registrar_posicion(float(latitud), float(longitud))
+            return Response({
+                'mensaje': 'Posición registrada con éxito',
+                'lat': posicion_registrada.posicion_x,
+                'lon': posicion_registrada.posicion_y
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=True, methods=['post'])
+    def finalizar(self, request, pk=None):
+        viaje = self.get_object()
+        
+        try:
+            # Llama al método del modelo que valida que esté en curso y setea la hora de llegada
+            viaje.finalizar_viaje()
+            
+            return Response({
+                'mensaje': 'Viaje finalizado con éxito',
+                'id_viaje': viaje.id_viaje,
+                'estado': viaje.estado,
+                'hora_llegada': viaje.hora_llegada
+            }, status=status.HTTP_200_OK)
+            
+        except ValueError as e:
+            # Si el viaje no estaba en curso, captura el error del modelo y devuelve un 400
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
     
 class PosicionViewsSet(viewsets.ModelViewSet):
     queryset= Posicion.objects.all()
