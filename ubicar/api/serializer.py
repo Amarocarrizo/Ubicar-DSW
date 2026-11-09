@@ -51,6 +51,10 @@ class ViajeSerializer(serializers.ModelSerializer):
         ]
 
 class GastoSerializer(serializers.ModelSerializer):
+    estado_nombre = serializers.CharField(
+            source='estado.estado',
+            read_only=True
+            )
     class Meta:
         model = Gasto
         fields = '__all__'

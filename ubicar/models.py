@@ -152,6 +152,12 @@ class Viaje(models.Model):
         null=True, #bd puede gusardar vacio
         blank=True #podes no asignarle conductor al auto ni bine lo registras
         )
+    km_inicial = models.DecimalField(
+     max_digits=10,
+     decimal_places=2,
+     null=True,
+     blank=True
+    )
 
     def __str__(self):
         return f"Viaje: {self.id_viaje}"
@@ -186,6 +192,7 @@ class Viaje(models.Model):
 
          self.estado = EstadoViaje.EN_CURSO
          self.hora_inicio = timezone.now()
+         self.km_inicial = self.id_patente.kilometraje
          self.save()
          if latitud_inicial is not None and longitud_inicial is not None:
           self.registrar_posicion(latitud_inicial, longitud_inicial)
@@ -317,6 +324,50 @@ class Viaje(models.Model):
         return True
 
      return False
+    def _distancia_haversine(self, lat1, lon1, lat2, lon2): #repito la formula haversine 
+     R = 6371000  # radio de la Tierra en metros
+
+     lat1 = radians(lat1)
+     lon1 = radians(lon1)
+     lat2 = radians(lat2)
+     lon2 = radians(lon2)
+
+     dlat = lat2 - lat1
+     dlon = lon2 - lon1
+
+     a = (
+        sin(dlat / 2) ** 2
+        + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+     )
+
+     c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+     return R * c
+    def calcular_km_recorridos(self): #calculo los kilometros recorridos entre posiciones
+
+     posiciones = list(
+        self.posicion_set.order_by('hora')
+     )
+
+     if len(posiciones) < 2:
+        return 0
+
+     distancia_total = 0
+
+     for i in range(len(posiciones) - 1):
+
+        p1 = posiciones[i]
+        p2 = posiciones[i + 1]
+
+        distancia_total += self._distancia_haversine(
+            float(p1.posicion_x),
+            float(p1.posicion_y),
+            float(p2.posicion_x),
+            float(p2.posicion_y)
+        )
+
+     return distancia_total / 1000
+    
 
 class Posicion(models.Model):
     id_posicion = models.AutoField(primary_key=True)
@@ -344,6 +395,8 @@ class estadoGasto(models.Model):
         ('PENDIENTE','Pendiente'),
         ('ACEPTADO','Aceptado'),
         ('AUSENTE','Ausente'),
+        ('VALIDADO', 'Validado'),
+        ('A_REVISAR', 'A revisar'),
     ]
     estado=models.CharField(max_length=20,choices=ESTADOGASTO,default='PENDIENTE')
     descripcion=models.CharField(max_length=50)
@@ -406,16 +459,65 @@ class Gasto(models.Model):
      self.estado = estado_rechazado
      self.administrador = administrador
      self.save()
+    def validar_gasto(self):
+
+     km_gps = self.viaje.calcular_km_recorridos()
+
+     km_declarados = (
+     float(self.km_registrado)
+     - float(self.viaje.km_inicial)
+     )
+
+     diferencia = abs(
+     km_declarados - km_gps
+     )
+     TOLERANCIA_KM = 5
+
+     if diferencia <= TOLERANCIA_KM:
+
+        estado_validado = estadoGasto.objects.get(
+            estado='VALIDADO'
+        )
+
+        self.estado = estado_validado
+        self.save()
+
+        return True
+
+     else:
+
+        estado_revisar = estadoGasto.objects.get(
+            estado='A_REVISAR'
+        )
+
+        self.estado = estado_revisar
+        self.save()
+
+        Alerta.objects.create(
+            tipo=AlertaDefinida.GASTO_INCONSISTENTE,
+            descripcion=(
+                f"Gasto inconsistente. "
+                f"Km declarados: {self.km_registrado}. "
+                f"Km GPS: {round(km_gps, 2)}."
+            ),
+            estado=EstadoAlerta.PENDIENTE,
+            viaje=self.viaje
+        )
+
+        return False
 
 class AlertaDefinida(models.TextChoices):
         DESVIO="DESVIO","Desvio"
         TARDANZA= "TARDANZA","Tardanza"
         PERDIDA_CONEXION = "PERDIDA_CONEXION", "Perdida de conexion"
+        GASTO_INCONSISTENTE = "GASTO_INCONSISTENTE","Gasto inconsistente"
+
 class EstadoAlerta(models.TextChoices):
     PENDIENTE = "PENDIENTE", "Pendiente"
     IRREGULARIDAD_CONFIRMADA = "IRREGULARIDAD_CONFIRMADA", "Irregularidad confirmada"
     REVISADA_SIN_NOVEDAD = "REVISADA_SIN_NOVEDAD", "Revisada sin novedad"
     RESUELTA = "RESUELTA", "Resuelta"
+
     
 class Alerta(models.Model):
     id_alerta = models.AutoField(primary_key=True)

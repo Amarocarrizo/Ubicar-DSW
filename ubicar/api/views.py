@@ -177,27 +177,34 @@ class GastoViewsSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
 
-        # 1- Obtener el conductor logueado
+        # 1- Obtener conductor autenticado
         try:
             conductor = self.request.user.conductor
+
         except Conductor.DoesNotExist:
             raise serializers.ValidationError(
                 "El usuario autenticado no es un conductor."
             )
 
-        # 2- Buscar un viaje activo de ese conductor
+        # 2- Buscar el viaje activo MÁS RECIENTE
         viaje = Viaje.objects.filter(
             id_conductor=conductor,
             hora_inicio__isnull=False,
             hora_llegada__isnull=True
-        ).first()
+        ).order_by('-hora_inicio').first()
 
         if viaje is None:
             raise serializers.ValidationError(
                 "El conductor no tiene un viaje activo."
             )
 
-        # 3- Buscar estado PENDIENTE
+        # 3- El viaje tiene que haber sido iniciado correctamente
+        if viaje.km_inicial is None:
+            raise serializers.ValidationError(
+                "El viaje activo no tiene kilometraje inicial registrado."
+            )
+
+        # 4- Buscar estado inicial PENDIENTE
         estado_pendiente = estadoGasto.objects.filter(
             estado='PENDIENTE'
         ).first()
@@ -207,11 +214,49 @@ class GastoViewsSet(viewsets.ModelViewSet):
                 "No existe el estado PENDIENTE para los gastos."
             )
 
-        # 4- Crear gasto automáticamente asociado al viaje
-        serializer.save(
+        # 5- Crear gasto asociado automáticamente al viaje
+        gasto = serializer.save(
             viaje=viaje,
             estado=estado_pendiente
         )
+
+        # 6- Prevalidación automática
+        gasto.validar_gasto()
+    @action(detail=True, methods=['post'])
+    def aprobar(self, request, pk=None):
+
+     gasto = self.get_object()
+
+     administrador_id = request.data.get('administrador')
+
+     administrador = Administrador.objects.get(
+        id_admin=administrador_id
+     )
+
+     gasto.aprobar(administrador)
+
+     return Response({
+        'mensaje': 'Gasto aprobado correctamente'
+     })
+
+
+    @action(detail=True, methods=['post'])
+    def rechazar(self, request, pk=None):
+
+     gasto = self.get_object()
+
+     administrador_id = request.data.get('administrador')
+
+     administrador = Administrador.objects.get(
+        id_admin=administrador_id
+     )
+
+     gasto.rechazar(administrador)
+
+     return Response({
+        'mensaje': 'Gasto rechazado correctamente'
+     })
+
 class AlertaViewsSet(viewsets.ModelViewSet):
     queryset= Alerta.objects.all()
     serializer_class= AlertaSerializer
