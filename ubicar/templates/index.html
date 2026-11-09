@@ -490,7 +490,7 @@
                         // =========================
                         // 1. GUARDAR RUTA EN DJANGO
                         // =========================
-
+                        const token = localStorage.getItem("access_token");
                         let respuestaRuta =
                             await fetch(
 
@@ -501,9 +501,11 @@
                                     method: 'POST',
 
                                     headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${token}`
 
-                                        'Content-Type':
-                                            'application/json'
+                                       // 'Content-Type':
+                                        //    'application/json'
 
                                     },
 
