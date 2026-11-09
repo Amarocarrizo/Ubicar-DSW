@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from decimal import Decimal
 from math import radians, sin, cos, sqrt, atan2
+from datetime import timedelta
 # Create your models here.
 
 #arrancar con las clases independientes para no hacer una dependiente sin haber declarado de la que depende
@@ -237,6 +238,15 @@ class Viaje(models.Model):
             posicion_y=longitud,
             hora=timezone.now()
         )
+        # 2- Si había una alerta de pérdida de conexión pendiente,
+         # significa que volvió la conexión
+        Alerta.objects.filter(
+        viaje=self,
+        tipo=AlertaDefinida.PERDIDA_CONEXION,
+        estado='PENDIENTE'
+        ).update(
+         estado='RESUELTA'
+        )
         # 2- Verificar el desvío comparando con la ruta
         UMBRAL_DESVIO_METROS = 200.0  # Margen permitido de desvío (ej: 200 metros)
         distancia_al_camino = self._calcular_distancia_a_ruta(latitud, longitud)
@@ -264,6 +274,49 @@ class Viaje(models.Model):
         self.estado= EstadoViaje.FINALIZADO
         self.hora_llegada = timezone.now()
         self.save()
+    def verificar_perdida_conexion(self):
+
+     # Si el viaje ya terminó, no tiene sentido verificar conexión
+     if self.hora_llegada is not None:
+        return False
+
+     # Buscar la última posición recibida
+     ultima_posicion = Posicion.objects.filter(
+        id_viaje=self
+     ).order_by('-hora').first()
+
+    # Si por alguna razón todavía no hay posiciones
+     if ultima_posicion is None:
+        return False
+
+    # La app manda posición cada 10 segundos.
+    # Damos margen de 30 segundos antes de considerar pérdida.
+     limite = timezone.now() - timedelta(seconds=30)
+
+     if ultima_posicion.hora < limite:
+
+        # Evitar crear la misma alerta una y otra vez
+        alerta_existente = Alerta.objects.filter(
+            viaje=self,
+            tipo=AlertaDefinida.PERDIDA_CONEXION,
+            estado='PENDIENTE'
+        ).exists()
+
+        if not alerta_existente:
+
+            Alerta.objects.create(
+                tipo=AlertaDefinida.PERDIDA_CONEXION,
+                descripcion=(
+                    "No se recibe geolocalización "
+                    "del conductor hace más de 30 segundos."
+                ),
+                estado='PENDIENTE',
+                viaje=self
+            )
+
+        return True
+
+     return False
 
 class Posicion(models.Model):
     id_posicion = models.AutoField(primary_key=True)
@@ -357,16 +410,25 @@ class Gasto(models.Model):
 class AlertaDefinida(models.TextChoices):
         DESVIO="DESVIO","Desvio"
         TARDANZA= "TARDANZA","Tardanza"
+        PERDIDA_CONEXION = "PERDIDA_CONEXION", "Perdida de conexion"
+class EstadoAlerta(models.TextChoices):
+    PENDIENTE = "PENDIENTE", "Pendiente"
+    IRREGULARIDAD_CONFIRMADA = "IRREGULARIDAD_CONFIRMADA", "Irregularidad confirmada"
+    REVISADA_SIN_NOVEDAD = "REVISADA_SIN_NOVEDAD", "Revisada sin novedad"
+    RESUELTA = "RESUELTA", "Resuelta"
     
 class Alerta(models.Model):
     id_alerta = models.AutoField(primary_key=True)
     tipo = models.CharField(max_length=20 ,choices=AlertaDefinida.choices)
     descripcion = models.CharField(max_length=250)
     fecha_hora = models.DateTimeField(default=timezone.now)
-    estado = models.CharField(max_length=20, default='PENDIENTE')
-
+    estado = models.CharField(
+    max_length=30,
+    choices=EstadoAlerta.choices,
+    default=EstadoAlerta.PENDIENTE
+     )
     viaje = models.ForeignKey(
-        Viaje,
+       Viaje,
         on_delete=models.CASCADE
     )
 
@@ -377,5 +439,24 @@ class Alerta(models.Model):
         blank=True
     )
 
+    fecha_revision = models.DateTimeField( #se cuando se auditó
+    null=True,
+    blank=True
+     )
+
+    def confirmar_irregularidad(self, administrador):
+     self.estado = EstadoAlerta.IRREGULARIDAD_CONFIRMADA
+     self.administrador = administrador
+     self.fecha_revision = timezone.now()
+     self.save()
+ 
+
+    def revisar_sin_novedad(self, administrador):
+     self.estado = EstadoAlerta.REVISADA_SIN_NOVEDAD
+     self.administrador = administrador
+     self.fecha_revision = timezone.now()
+     self.save()
+
     def __str__(self):
         return f"Alerta {self.id_alerta} - {self.tipo}"
+

@@ -15,7 +15,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import serializers
-
+from ubicar.models import estadoGasto
 from ubicar.api.serializer import VehiculoSerializer
 from ubicar.api.serializer import AdministradorSerializer
 from ubicar.api.serializer import ConductorSerializer
@@ -144,16 +144,107 @@ class ViajeViewsSet(viewsets.ModelViewSet):
                 {'error': str(e)}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
+    @action(detail=False, methods=['post'])
+    def verificar_conexiones(self, request):
+
+      viajes_activos = Viaje.objects.filter(
+        hora_inicio__isnull=False,
+        hora_llegada__isnull=True
+     )
+
+      viajes_sin_conexion = []
+
+      for viaje in viajes_activos:
+
+        if viaje.verificar_perdida_conexion():
+            viajes_sin_conexion.append(
+                viaje.id_viaje
+            )
+
+      return Response({
+        'mensaje': 'Verificación realizada',
+        'viajes_sin_conexion': viajes_sin_conexion
+    })
     
 class PosicionViewsSet(viewsets.ModelViewSet):
     queryset= Posicion.objects.all()
     serializer_class= PosicionSerializer
 
 class GastoViewsSet(viewsets.ModelViewSet):
-    queryset= Gasto.objects.all()
-    serializer_class= GastoSerializer
+    queryset = Gasto.objects.all()
+    serializer_class = GastoSerializer
+    permission_classes = [IsAuthenticated]
 
+    def perform_create(self, serializer):
+
+        # 1- Obtener el conductor logueado
+        try:
+            conductor = self.request.user.conductor
+        except Conductor.DoesNotExist:
+            raise serializers.ValidationError(
+                "El usuario autenticado no es un conductor."
+            )
+
+        # 2- Buscar un viaje activo de ese conductor
+        viaje = Viaje.objects.filter(
+            id_conductor=conductor,
+            hora_inicio__isnull=False,
+            hora_llegada__isnull=True
+        ).first()
+
+        if viaje is None:
+            raise serializers.ValidationError(
+                "El conductor no tiene un viaje activo."
+            )
+
+        # 3- Buscar estado PENDIENTE
+        estado_pendiente = estadoGasto.objects.filter(
+            estado='PENDIENTE'
+        ).first()
+
+        if estado_pendiente is None:
+            raise serializers.ValidationError(
+                "No existe el estado PENDIENTE para los gastos."
+            )
+
+        # 4- Crear gasto automáticamente asociado al viaje
+        serializer.save(
+            viaje=viaje,
+            estado=estado_pendiente
+        )
 class AlertaViewsSet(viewsets.ModelViewSet):
     queryset= Alerta.objects.all()
     serializer_class= AlertaSerializer
+    @action(detail=True, methods=['post'])
+    def confirmar(self, request, pk=None):
+
+     alerta = self.get_object()
+
+     administrador_id = request.data.get('administrador')
+
+     administrador = Administrador.objects.get(
+        id_admin=administrador_id
+     )
+
+     alerta.confirmar_irregularidad(administrador)
+
+     return Response({
+        'mensaje': 'Irregularidad confirmada'
+     })
+    @action(detail=True, methods=['post'])
+    def sin_novedad(self, request, pk=None):
+
+     alerta = self.get_object()
+
+     administrador_id = request.data.get('administrador')
+
+     administrador = Administrador.objects.get(
+        id_admin=administrador_id
+     )
+
+     alerta.revisar_sin_novedad(administrador)
+
+     return Response({
+        'mensaje': 'Alerta revisada sin novedad'
+     })
 

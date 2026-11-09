@@ -52,9 +52,13 @@ class ViajeSerializer(serializers.ModelSerializer):
 
 class GastoSerializer(serializers.ModelSerializer):
     class Meta:
-        model= Gasto
-        fields= '__all__'
-
+        model = Gasto
+        fields = '__all__'
+        read_only_fields = [
+            'viaje',
+            'estado',
+            'fecha_hora'
+        ] #solo lectura, asi el conductor no puede elegir manualmente viaje ni gasto
 class AlertaSerializer(serializers.ModelSerializer):
     class Meta:
         model= Alerta
