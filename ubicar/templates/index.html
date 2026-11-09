@@ -235,10 +235,20 @@
         btnCalcular.addEventListener(
             "click",
 
-            function () {
-
+            async function () {
+                if (!coordsOrigen && buscadorO.value.trim()) {
+                    let resO = await getInfo(buscadorO.value.trim());
+                    if (resO && resO.length > 0) {
+                        coordsOrigen = actualizarMarcadorO(resO[0]);
+                    }
+                }
+                if (!coordsDestino && buscadorD.value.trim()) {
+                    let resD = await getInfo(buscadorD.value.trim());
+                    if (resD && resD.length > 0) {
+                        coordsDestino = actualizarMarcadorD(resD[0]);
+                    }
+                }
                 intentarTrazarRuta();
-
             }
         );
 
@@ -252,7 +262,7 @@
 
             let peticion = await fetch(
 
-                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(a)}%20Buenos%20Aires&format=json&limit=1`
+                `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(a)}&countrycodes=ar&format=json&limit=1`
 
             );
 
