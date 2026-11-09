@@ -5,3 +5,6 @@ __pycache__/
 .idea/
 db.sqlite3
 .env
+.venv/
+venv/
+media/

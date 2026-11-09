@@ -27,7 +27,7 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']  # servidor de desarrollo: permite entrar desde el celular por la IP de la notebook
 
 
 # Application definition
@@ -76,16 +76,30 @@ WSGI_APPLICATION = 'UBICARproject.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME', 'ubicar_db'),
-        'USER': os.getenv('DB_USER', 'root'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST', 'localhost'),
-        'PORT': os.getenv('DB_PORT', '3306'),
+# USE_SQLITE=1 en el .env => base local en un archivo, sin necesidad de MySQL (demo).
+# Sin esa variable se usa MySQL con las credenciales del .env, como siempre.
+USE_SQLITE = os.getenv('USE_SQLITE') == '1'
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'  # el tipo de id que ya usan las migraciones; evita el warning W042
+
+if USE_SQLITE:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.getenv('DB_NAME', 'ubicar_db'),
+            'USER': os.getenv('DB_USER', 'root'),
+            'PASSWORD': os.getenv('DB_PASSWORD'),
+            'HOST': os.getenv('DB_HOST', 'localhost'),
+            'PORT': os.getenv('DB_PORT', '3306'),
+        }
+    }
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -147,5 +161,6 @@ MAILERS = {
     },
 }
 
-from django.db.backends.mysql.features import DatabaseFeatures
-DatabaseFeatures.minimum_database_version = (8, 0, 0)
+if not USE_SQLITE:
+    from django.db.backends.mysql.features import DatabaseFeatures
+    DatabaseFeatures.minimum_database_version = (8, 0, 0)
