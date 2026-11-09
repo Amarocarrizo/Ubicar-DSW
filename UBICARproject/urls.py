@@ -30,6 +30,8 @@ urlpatterns = [
     # Pantallas (front)
     path('', views.home),
     path('login/', views.login_view),
+    path('conductor/', views.conductor_inicio),
+    path('conductor/nuevo-viaje/', views.conductor_nuevo_viaje),
     path(
         'api/login/',
         TokenObtainPairView.as_view(),

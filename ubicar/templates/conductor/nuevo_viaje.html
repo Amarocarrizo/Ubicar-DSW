@@ -1,0 +1,115 @@
+{% extends "conductor/base_conductor.html" %}
+{% block titulo %}Nuevo viaje · UBICAR{% endblock %}
+
+{% block cabecera %}
+<div class="m-fila">
+  <a class="icono-btn" href="/conductor/">←</a>
+  <h1>Nuevo Viaje</h1>
+</div>
+{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta">
+  <p class="titulo-seccion">Ruta</p>
+  <div class="campo">
+    <label>◎ Origen</label>
+    <div style="display:flex;gap:8px"><input id="origen" placeholder="Ingrese lugar de partida" value="Campana"><button class="btn btn-borde" type="button" data-buscar="origen">Buscar</button></div>
+    <span class="ayuda" id="origen-nombre"></span>
+  </div>
+  <div class="campo" style="margin-bottom:0">
+    <label>⚑ Destino</label>
+    <div style="display:flex;gap:8px"><input id="destino" placeholder="Ingrese lugar de destino"><button class="btn btn-borde" type="button" data-buscar="destino">Buscar</button></div>
+    <span class="ayuda" id="destino-nombre"></span>
+  </div>
+</div>
+
+<div class="tarjeta">
+  <p class="titulo-seccion">Detalles del viaje</p>
+  <div class="datos" style="margin-bottom:10px">
+    <div class="dato"><div class="rotulo">Fecha</div><div class="valor" id="fecha"></div></div>
+    <div class="dato"><div class="rotulo">Hora</div><div class="valor" id="hora"></div></div>
+  </div>
+  <div class="fila-dato"><div class="ico ico-azul">🚚</div><div><div class="rotulo ayuda">Vehículo</div><b id="vehiculo">—</b></div></div>
+  <div class="fila-dato"><div class="ico ico-naranja">⟷</div><div><div class="rotulo ayuda">Distancia estimada</div><b id="distancia">—</b></div></div>
+  <div class="fila-dato" style="margin-bottom:0"><div class="ico ico-verde">◷</div><div><div class="rotulo ayuda">Tiempo estimado</div><b id="tiempo">—</b></div></div>
+</div>
+
+<div class="tarjeta">
+  <p class="titulo-seccion" style="display:flex;justify-content:space-between">Vista previa <span class="chip chip-gris" id="estado-ruta">Ingresá origen y destino</span></p>
+  <div class="mapa" id="mapa" style="height:220px"></div>
+</div>
+
+<div class="error-msg oculto" id="error"></div>
+<button class="btn btn-azul btn-ancho" id="confirmar" disabled style="padding:15px">Confirmar</button>
+{% endblock %}
+
+{% block script_pantalla %}
+<script>
+(async () => {
+  const me = await Conductor.iniciar();
+  if (!me) return;
+  const $ = id => document.getElementById(id);
+
+  const ahora = new Date();
+  $('fecha').textContent = ahora.toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' });
+  $('hora').textContent = F.hora(ahora.toISOString());
+  const vehiculo = me.vehiculo_asignado;
+  $('vehiculo').textContent = vehiculo ? `${vehiculo.modelo} - ${vehiculo.patente}` : 'Sin vehículo asignado';
+
+  const mapa = Mapa.crear('mapa', 11);
+  const lugares = { origen: null, destino: null };   // resultado de Nominatim para cada punto
+  const marcadores = { origen: null, destino: null };
+  let ruta = null, capaRuta = null;                  // resultado de OSRM y su dibujo
+
+  // 1) Buscar un lugar por texto y ponerle un marcador.
+  async function buscar(cual) {
+    const texto = $(cual).value.trim();
+    if (!texto) return;
+    $(cual + '-nombre').textContent = 'Buscando…';
+    const lugar = await Mapa.buscarLugar(texto + ', Buenos Aires, Argentina');
+    if (!lugar) { $(cual + '-nombre').textContent = 'No se encontró la localidad'; return; }
+    $(cual + '-nombre').textContent = lugar.nombre;
+    lugares[cual] = lugar;
+    if (marcadores[cual]) mapa.removeLayer(marcadores[cual]);
+    marcadores[cual] = Mapa.marcador(mapa, lugar.lat, lugar.lon, cual === 'origen' ? '#1d5cff' : '#16a34a', cual === 'origen' ? 'A' : 'B');
+    Mapa.encuadrar(mapa, [marcadores.origen, marcadores.destino]);
+    if (lugares.origen && lugares.destino) await trazar();
+  }
+
+  // 2) Con los dos puntos, pedir la ruta a OSRM y dibujarla.
+  async function trazar() {
+    $('estado-ruta').textContent = 'Calculando ruta…';
+    ruta = await Mapa.calcularRuta(lugares.origen, lugares.destino).catch(() => null);
+    if (!ruta) { $('estado-ruta').textContent = 'Sin ruta por carretera'; $('estado-ruta').className = 'chip chip-rojo'; return; }
+    if (capaRuta) mapa.removeLayer(capaRuta);
+    capaRuta = Mapa.dibujarRuta(mapa, ruta.geometria);
+    Mapa.encuadrar(mapa, [capaRuta]);
+    $('distancia').textContent = F.km(ruta.distanciaKm);
+    $('tiempo').textContent = Math.round(ruta.duracionMin) + ' min';
+    $('estado-ruta').textContent = 'Ruta sugerida'; $('estado-ruta').className = 'chip chip-verde';
+    $('confirmar').disabled = !vehiculo;
+  }
+
+  // 3) Confirmar: guardar la Ruta, crear el Viaje y pasar a la pantalla del viaje (que lo inicia con el GPS).
+  $('confirmar').onclick = async () => {
+    $('confirmar').disabled = true; $('confirmar').textContent = 'Creando viaje…';
+    try {
+      const nuevaRuta = await API.post('/api/ruta/', {
+        origen: $('origen').value.trim(), destino: $('destino').value.trim(),
+        distancia_estimada: ruta.distanciaKm.toFixed(2), tiempo_estimado: ruta.duracionMin.toFixed(2),
+        geometria_ruta: ruta.geometria,
+      });
+      const viaje = await API.post('/api/viaje/', { id_ruta: nuevaRuta.id_ruta });
+      location.href = '/conductor/viaje/' + viaje.id_viaje + '/';
+    } catch (e) {
+      $('error').textContent = e.message; $('error').classList.remove('oculto');
+      $('confirmar').disabled = false; $('confirmar').textContent = 'Confirmar';
+    }
+  };
+
+  document.querySelectorAll('[data-buscar]').forEach(b => b.onclick = () => buscar(b.dataset.buscar));
+  ['origen', 'destino'].forEach(id => $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); buscar(id); } }));
+  buscar('origen'); // el origen viene precargado
+})();
+</script>
+{% endblock %}

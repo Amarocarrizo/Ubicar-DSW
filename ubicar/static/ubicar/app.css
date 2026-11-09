@@ -63,3 +63,65 @@ button, input, select { font: inherit; }
 .login-caja p { color: var(--gris); font-size: 13px; margin: 0 0 20px; }
 .login-demo { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--linea); font-size: 12px; color: var(--gris); }
 .login-demo code { background: var(--fondo); padding: 1px 6px; border-radius: 4px; }
+
+/* ===== App del conductor (móvil) ===== */
+/* En el celular ocupa toda la pantalla; en una PC se ve centrada con ancho de teléfono. */
+.movil { max-width: 430px; margin: 0 auto; min-height: 100vh; background: var(--fondo); display: flex; flex-direction: column; }
+@media (min-width: 600px) { body.fondo-movil { background: #d9dee8; } .movil { box-shadow: 0 0 0 1px #cbd2de, 0 30px 60px rgba(0, 0, 0, .2); } }
+
+.m-cabecera { background: var(--navy); color: #fff; padding: 14px 16px 18px; border-radius: 0 0 20px 20px; }
+.m-fila { display: flex; align-items: center; gap: 12px; }
+.avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1e3a8a); color: #fff; display: grid; place-items: center; font-weight: 700; }
+.m-cabecera .saludo { font-size: 11px; opacity: .75; }
+.m-cabecera .nombre { font-weight: 700; font-size: 15px; }
+.m-cabecera .marca-chip { margin-left: auto; border: 1px solid rgba(255, 255, 255, .35); border-radius: 999px; padding: 4px 10px; font-size: 10px; font-weight: 800; letter-spacing: .12em; }
+.m-cabecera h1 { font-size: 16px; margin: 0; }
+.m-cabecera .icono-btn { background: none; border: 0; color: #fff; font-size: 22px; padding: 0 4px; cursor: pointer; }
+.m-cuerpo { padding: 16px 16px 90px; flex: 1; }
+.m-cuerpo .tarjeta { margin-bottom: 14px; }
+.m-titulo { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; margin: 6px 0 10px; }
+.m-titulo a { color: var(--azul); font-size: 12px; }
+
+.resumen { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.resumen .valor { font-size: 22px; font-weight: 800; }
+.resumen .rotulo { font-size: 10px; font-weight: 700; letter-spacing: .06em; color: var(--gris); text-transform: uppercase; }
+.resumen .detalle { font-size: 10px; color: #94a3b8; }
+
+.accesos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+.acceso { background: #fff; border-radius: 12px; box-shadow: var(--sombra); padding: 12px 8px; text-align: center; font-size: 11px; font-weight: 600; }
+.acceso .ico { width: 36px; height: 36px; border-radius: 10px; margin: 0 auto 8px; display: grid; place-items: center; font-size: 18px; }
+.acceso.apagado { opacity: .5; }
+.ico-azul { background: #dbeafe; } .ico-verde { background: var(--verde-bg); } .ico-naranja { background: var(--naranja-bg); } .ico-gris { background: #e2e8f0; }
+
+.viaje { display: block; padding: 12px 0; border-top: 1px solid var(--linea); }
+.viaje:first-child { border-top: 0; padding-top: 0; }
+.viaje .arriba { display: flex; justify-content: space-between; font-size: 11px; color: var(--gris); }
+.viaje .arriba b { display: flex; align-items: center; gap: 6px; }
+.viaje .ruta { font-weight: 700; font-size: 13px; margin: 4px 0 2px; }
+.viaje .meta { font-size: 11px; color: var(--gris); }
+
+.barra { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; background: #fff;
+         border-top: 1px solid var(--linea); display: grid; grid-template-columns: repeat(4, 1fr); padding: 8px 0 14px; z-index: 50; }
+.barra a { text-align: center; font-size: 10px; color: #94a3b8; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.barra a span { font-size: 18px; }
+.barra a.activo { color: var(--azul); font-weight: 600; }
+
+.menu-fondo { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); z-index: 90; }
+.menu { position: fixed; top: 0; left: 0; width: 300px; max-width: 85vw; height: 100vh; background: #fff; z-index: 100; padding: 18px; overflow-y: auto; }
+@media (min-width: 600px) { .menu { left: calc(50% - 215px); } }
+.menu .cerrar { position: absolute; right: 14px; top: 14px; width: 30px; height: 30px; border-radius: 50%; background: var(--navy); color: #fff; border: 0; cursor: pointer; }
+.menu .nombre { font-weight: 700; font-size: 15px; margin-top: 8px; }
+.menu .sub { font-size: 11px; color: var(--gris); }
+.menu .vehiculo { font-size: 11px; color: var(--verde); font-weight: 600; margin-top: 4px; }
+.menu h4 { font-size: 10px; letter-spacing: .1em; color: #94a3b8; margin: 18px 0 6px; }
+.menu a, .menu button.item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 8px; font-size: 13px; width: 100%; background: none; border: 0; text-align: left; cursor: pointer; }
+.menu a.activo { background: #e8f0ff; color: var(--azul); font-weight: 600; }
+.menu a.apagado { opacity: .45; }
+.menu .salir { margin-top: 18px; border-top: 1px solid var(--linea); padding-top: 12px; }
+
+.datos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.dato { background: var(--fondo); border-radius: 8px; padding: 10px 12px; }
+.dato .rotulo { font-size: 10px; color: var(--gris); font-weight: 600; }
+.dato .valor { font-size: 14px; font-weight: 700; margin-top: 2px; }
+.fila-dato { display: flex; align-items: center; gap: 10px; background: var(--fondo); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.fila-dato .ico { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; }

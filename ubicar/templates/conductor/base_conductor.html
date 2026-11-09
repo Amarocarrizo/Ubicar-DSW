@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% load static %}
+{% block clase_body %}fondo-movil{% endblock %}
+
+{% block cuerpo %}
+<div class="movil">
+  <header class="m-cabecera">
+    {% block cabecera %}
+    <div class="m-fila">
+      <div class="avatar" data-iniciales></div>
+      <div>
+        <div class="saludo" data-saludo>Hola</div>
+        <div class="nombre" data-nombre>&nbsp;</div>
+      </div>
+      <span class="marca-chip">UBICAR</span>
+      <button class="icono-btn" data-abrir-menu aria-label="Menú">☰</button>
+    </div>
+    {% block cabecera_extra %}{% endblock %}
+    {% endblock %}
+  </header>
+
+  <main class="m-cuerpo">
+    {% block contenido %}{% endblock %}
+  </main>
+
+  <nav class="barra">
+    <a href="/conductor/"><span>⌂</span>Inicio</a>
+    <a href="/conductor/viajes/"><span>➤</span>Viajes</a>
+    <a href="/conductor/gastos/"><span>▤</span>Gastos</a>
+    <a href="/conductor/perfil/"><span>☺</span>Perfil</a>
+  </nav>
+
+  <div class="menu-fondo oculto" id="menu-fondo" data-cerrar-menu></div>
+  <aside class="menu oculto" id="menu">
+    <button class="cerrar" data-cerrar-menu aria-label="Cerrar">✕</button>
+    <div class="avatar" data-iniciales></div>
+    <div class="nombre" data-nombre></div>
+    <div class="sub">Conductor Principal · <span data-licencia></span></div>
+    <div class="vehiculo">● <span data-vehiculo></span></div>
+
+    <h4>OPERACIONES</h4>
+    <a href="/conductor/">⌂ Inicio</a>
+    <a href="/conductor/viajes/">➤ Historial de Viajes</a>
+    <a href="/conductor/gastos/">▤ Mis Gastos</a>
+    <h4>MANTENIMIENTO Y CONTROL</h4>
+    <a href="#" class="apagado">▣ Documentos</a>
+    <a href="#" class="apagado">▥ Reportes</a>
+    <h4>SISTEMA</h4>
+    <a href="#" class="apagado">✉ Mensajes</a>
+    <a href="#" class="apagado">🔔 Notificaciones</a>
+    <a href="/conductor/perfil/">⚙ Configuración</a>
+    <div class="salir"><button class="item" data-salir>⎋ Cerrar Sesión</button></div>
+  </aside>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'ubicar/mapa.js' %}"></script>
+<script src="{% static 'ubicar/conductor.js' %}"></script>
+{% block script_pantalla %}{% endblock %}
+{% endblock %}

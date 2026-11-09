@@ -51,6 +51,14 @@ class ViajeViewsSet(viewsets.ModelViewSet):
     serializer_class = ViajeSerializer
     permission_classes = [IsAuthenticated]
 
+    def get_queryset(self):
+        # Un conductor solo ve sus propios viajes (los más nuevos primero); el admin ve todos.
+        viajes = Viaje.objects.all().order_by('-id_viaje')
+        conductor = Conductor.objects.filter(usuario=self.request.user).first()
+        if conductor and not self.request.user.is_staff:
+            viajes = viajes.filter(id_conductor=conductor)
+        return viajes
+
     def perform_create(self, serializer):
         conductor = self.request.user.conductor
 

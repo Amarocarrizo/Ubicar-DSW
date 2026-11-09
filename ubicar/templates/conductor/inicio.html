@@ -1,0 +1,69 @@
+{% extends "conductor/base_conductor.html" %}
+{% block titulo %}Inicio · UBICAR{% endblock %}
+
+{% block cabecera_extra %}
+<a class="btn btn-azul btn-ancho" id="boton-viaje" href="/conductor/nuevo-viaje/" style="margin-top:16px;padding:15px">▷ &nbsp;INICIAR VIAJE NUEVO</a>
+{% endblock %}
+
+{% block contenido %}
+<div class="tarjeta">
+  <p class="titulo-seccion">Resumen mensual</p>
+  <div class="resumen">
+    <div><div class="valor" id="km-mes">—</div><div class="rotulo">Recorridos</div><div class="detalle">Viajes finalizados</div></div>
+    <div><div class="valor" id="gastos-mes">—</div><div class="rotulo">Gastos mes</div><div class="detalle">Peajes y Combustible</div></div>
+  </div>
+</div>
+
+<div class="m-titulo">Acciones Rápidas</div>
+<div class="accesos">
+  <a class="acceso" href="/conductor/perfil/"><div class="ico ico-azul">🚚</div>Mis Vehículos</a>
+  <a class="acceso" href="/conductor/gasto/"><div class="ico ico-verde">▤</div>Cargar Gasto</a>
+  <a class="acceso" href="/conductor/viajes/"><div class="ico ico-naranja">⟳</div>Historial Viajes</a>
+  <a class="acceso apagado" href="#"><div class="ico ico-gris">▣</div>Documentos</a>
+  <a class="acceso apagado" href="#"><div class="ico ico-gris">✉</div>Mensajes</a>
+</div>
+
+<div class="m-titulo">Viajes Recientes <a href="/conductor/viajes/">Ver todos</a></div>
+<div class="tarjeta" id="recientes"><span class="ayuda">Cargando…</span></div>
+{% endblock %}
+
+{% block script_pantalla %}
+<script>
+(async () => {
+  const me = await Conductor.iniciar();
+  if (!me) return;
+
+  // Un solo pedido por recurso; el resto se calcula acá.
+  const [viajes, gastos] = await Promise.all([API.get('/api/viaje/'), API.get('/api/gasto/')]);
+
+  // Si hay un viaje activo, el botón grande lo retoma en vez de crear otro.
+  const activo = viajes.find(v => v.hora_inicio && !v.hora_llegada && v.estado !== 'CANCELADO');
+  if (activo) {
+    const boton = document.getElementById('boton-viaje');
+    boton.href = '/conductor/viaje/' + activo.id_viaje + '/';
+    boton.innerHTML = '➤ &nbsp;CONTINUAR VIAJE EN CURSO';
+  }
+
+  // Resumen del mes: km de los viajes finalizados y suma de gastos no rechazados.
+  const esDeEsteMes = iso => iso && new Date(iso).getMonth() === new Date().getMonth();
+  const km = viajes.filter(v => v.estado === 'FINALIZADO' && esDeEsteMes(v.hora_llegada))
+                   .reduce((suma, v) => suma + Number(v.ruta.distancia_estimada), 0);
+  const plata = gastos.filter(g => esDeEsteMes(g.fecha_hora) && g.estado_nombre !== 'RECHAZADO')
+                      .reduce((suma, g) => suma + Number(g.monto), 0);
+  document.getElementById('km-mes').textContent = F.km(km);
+  document.getElementById('gastos-mes').textContent = F.plata(plata);
+
+  // Últimos tres viajes.
+  const caja = document.getElementById('recientes');
+  if (!viajes.length) { caja.innerHTML = '<span class="ayuda">Todavía no tenés viajes.</span>'; return; }
+  caja.innerHTML = viajes.slice(0, 3).map(v => {
+    const [etiqueta, color] = Conductor.estado(v.estado);
+    return `<a class="viaje" href="/conductor/viaje/${v.id_viaje}/">
+      <div class="arriba"><b><span class="punto punto-${color}"></span>${F.fecha(v.hora_inicio)} ${F.hora(v.hora_inicio)}</b><span>${Conductor.numero(v.id_viaje)}</span></div>
+      <div class="ruta">${F.texto(v.ruta.origen)} → ${F.texto(v.ruta.destino)}</div>
+      <div class="meta">${F.km(v.ruta.distancia_estimada)} · ${etiqueta} · ${F.texto(v.vehiculo ? v.vehiculo.modelo : '')}</div>
+    </a>`;
+  }).join('');
+})();
+</script>
+{% endblock %}

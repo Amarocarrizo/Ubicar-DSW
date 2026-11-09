@@ -12,5 +12,14 @@ def login_view(request):
     return render(request, 'login.html')
 
 
+# --- Conductor (app móvil) ---
+def conductor_inicio(request):
+    return render(request, 'conductor/inicio.html')
+
+
+def conductor_nuevo_viaje(request):
+    return render(request, 'conductor/nuevo_viaje.html')
+
+
 def ver_mapa(request):
     return render(request, 'index.html')

@@ -42,6 +42,12 @@ class PosicionSerializer(serializers.ModelSerializer):
 
 
 class ViajeSerializer(serializers.ModelSerializer):
+    # Además de los ids, se devuelven los datos de la ruta, el vehículo y el conductor
+    # (solo lectura) para que el front no tenga que hacer un pedido extra por cada viaje.
+    ruta = RutaSerializer(source='id_ruta', read_only=True)
+    vehiculo = VehiculoSerializer(source='id_patente', read_only=True)
+    conductor = ConductorSerializer(source='id_conductor', read_only=True)
+
     class Meta:
         model= Viaje
         fields= '__all__'
