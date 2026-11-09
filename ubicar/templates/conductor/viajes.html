@@ -1,0 +1,26 @@
+{% extends "conductor/base_conductor.html" %}
+{% block titulo %}Mis viajes · UBICAR{% endblock %}
+
+{% block contenido %}
+<div class="m-titulo">Historial de Viajes <a href="/conductor/nuevo-viaje/">+ Nuevo</a></div>
+<div class="tarjeta" id="lista"><span class="ayuda">Cargando…</span></div>
+{% endblock %}
+
+{% block script_pantalla %}
+<script>
+(async () => {
+  if (!await Conductor.iniciar()) return;
+  const viajes = await API.get('/api/viaje/');
+  const lista = document.getElementById('lista');
+  if (!viajes.length) { lista.innerHTML = '<span class="ayuda">Todavía no tenés viajes.</span>'; return; }
+  lista.innerHTML = viajes.map(v => {
+    const [etiqueta, color] = Conductor.estado(v.estado);
+    return `<a class="viaje" href="/conductor/viaje/${v.id_viaje}/">
+      <div class="arriba"><b><span class="punto punto-${color}"></span>${F.fecha(v.hora_inicio)} ${F.hora(v.hora_inicio)}</b><span>${Conductor.numero(v.id_viaje)}</span></div>
+      <div class="ruta">${F.texto(v.ruta.origen)} → ${F.texto(v.ruta.destino)}</div>
+      <div class="meta">${F.km(v.ruta.distancia_estimada)} · ${etiqueta} · ${F.texto(v.vehiculo ? v.vehiculo.patente : '')}</div>
+    </a>`;
+  }).join('');
+})();
+</script>
+{% endblock %}

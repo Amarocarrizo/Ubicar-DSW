@@ -125,3 +125,25 @@ button, input, select { font: inherit; }
 .dato .valor { font-size: 14px; font-weight: 700; margin-top: 2px; }
 .fila-dato { display: flex; align-items: center; gap: 10px; background: var(--fondo); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
 .fila-dato .ico { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; font-size: 14px; }
+
+/* --- viaje en curso y gastos --- */
+.estado-viaje { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-radius: 10px; margin-bottom: 12px; font-weight: 600; font-size: 13px; }
+.estado-viaje.ok { background: var(--verde-bg); color: #166534; }
+.estado-viaje.alerta { background: var(--rojo-bg); color: #991b1b; }
+.estado-viaje.espera { background: var(--naranja-bg); color: #92400e; }
+.gps { font-size: 11px; color: var(--gris); display: flex; align-items: center; gap: 6px; }
+.leyenda { display: flex; gap: 16px; font-size: 11px; color: var(--gris); margin-top: 8px; }
+.leyenda i { display: inline-block; width: 22px; border-top: 3px solid var(--azul); vertical-align: middle; margin-right: 6px; }
+.leyenda i.real { border-color: var(--rojo); }
+.leyenda i.punteada { border-top-style: dashed; border-color: #94a3b8; }
+.simulacion { border: 1.5px dashed #f59e0b; }
+.subir { display: block; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 22px; text-align: center; color: var(--gris); font-size: 13px; cursor: pointer; background: #fafbfc; }
+.subir input { display: none; }
+.subir img { max-height: 120px; border-radius: 8px; }
+.prefijo { position: relative; }
+.prefijo span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gris); }
+.prefijo input { padding-left: 26px; }
+.lista .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 1px solid var(--linea); }
+.lista .item:first-child { border-top: 0; }
+.lista .item b { font-size: 13px; }
+.lista .item .sub { font-size: 11px; color: var(--gris); }

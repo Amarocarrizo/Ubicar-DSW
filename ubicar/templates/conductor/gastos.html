@@ -1,0 +1,30 @@
+{% extends "conductor/base_conductor.html" %}
+{% block titulo %}Mis gastos · UBICAR{% endblock %}
+
+{% block contenido %}
+<div class="m-titulo">Mis Gastos <a href="/conductor/gasto/">+ Cargar gasto</a></div>
+<div class="tarjeta lista" id="lista"><span class="ayuda">Cargando…</span></div>
+{% endblock %}
+
+{% block script_pantalla %}
+<script>
+(async () => {
+  if (!await Conductor.iniciar()) return;
+  const ESTADOS = { PENDIENTE: ['Pendiente', 'naranja'], VALIDADO: ['Validado', 'verde'], A_REVISAR: ['A revisar', 'naranja'],
+                    ACEPTADO: ['Aprobado', 'verde'], RECHAZADO: ['Rechazado', 'rojo'] };
+  const NOMBRES = { COMBUSTIBLE: 'Combustible', PEAJE: 'Peaje', OTROS: 'Otros' };
+  const [gastos, tipos] = await Promise.all([API.get('/api/gasto/'), API.get('/api/tipos-gasto/')]);
+  const nombreTipo = id => { const t = tipos.find(t => t.idTipoDeGasto === id); return t ? NOMBRES[t.razon_del_gasto] || t.razon_del_gasto : '—'; };
+  const lista = document.getElementById('lista');
+  if (!gastos.length) { lista.innerHTML = '<span class="ayuda">Todavía no cargaste gastos.</span>'; return; }
+  lista.innerHTML = gastos.map(g => {
+    const [etiqueta, color] = ESTADOS[g.estado_nombre] || [g.estado_nombre, 'gris'];
+    return `<div class="item">
+      <div><b>${nombreTipo(g.tipo)}</b> <span class="chip chip-${color}">${etiqueta}</span>
+        <div class="sub">${F.fecha(g.fecha_hora)} ${F.hora(g.fecha_hora)} · ${Conductor.numero(g.viaje)} · ${Number(g.km_registrado).toLocaleString('es-AR')} km</div></div>
+      <b>${F.plata(g.monto)}</b>
+    </div>`;
+  }).join('');
+})();
+</script>
+{% endblock %}

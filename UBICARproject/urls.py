@@ -32,6 +32,11 @@ urlpatterns = [
     path('login/', views.login_view),
     path('conductor/', views.conductor_inicio),
     path('conductor/nuevo-viaje/', views.conductor_nuevo_viaje),
+    path('conductor/viaje/<int:id_viaje>/', views.conductor_viaje),
+    path('conductor/gasto/', views.conductor_gasto),
+    path('conductor/viajes/', views.conductor_viajes),
+    path('conductor/gastos/', views.conductor_gastos),
+    path('conductor/perfil/', views.conductor_perfil),
     path(
         'api/login/',
         TokenObtainPairView.as_view(),

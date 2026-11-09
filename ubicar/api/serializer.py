@@ -9,6 +9,12 @@ from ubicar.models import Viaje
 from ubicar.models import Gasto
 from ubicar.models import Alerta
 from ubicar.models import AsignacionVehiculo
+from ubicar.models import tipoDeGasto
+
+class TipoDeGastoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = tipoDeGasto
+        fields = '__all__'
 
 class VehiculoSerializer(serializers.ModelSerializer):
     class Meta:

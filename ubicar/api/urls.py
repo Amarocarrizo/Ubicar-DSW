@@ -8,7 +8,7 @@ from ubicar.api.views import ViajeViewsSet
 from ubicar.api.views import GastoViewsSet
 from ubicar.api.views import AlertaViewsSet
 from ubicar.api.views import AsignacionVehiculoViewSet
-from ubicar.api.views import MeView
+from ubicar.api.views import MeView, TipoDeGastoViewSet
 from django.urls import path
 router= DefaultRouter()
 router.register('vehiculos',VehiculoViewsSet,basename='vehiculo')
@@ -20,6 +20,7 @@ router.register('posicion',PosicionViewsSet,basename='posicion')
 router.register('viaje',ViajeViewsSet,basename='viaje')
 router.register('gasto',GastoViewsSet,basename='gasto')
 router.register('alerta',AlertaViewsSet,basename='alerta')
+router.register('tipos-gasto', TipoDeGastoViewSet, basename='tipoGasto')
 
 urlpatterns = [path('me/', MeView.as_view(), name='me')] + router.urls
 

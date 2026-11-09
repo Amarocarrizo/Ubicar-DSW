@@ -16,7 +16,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework import serializers
-from ubicar.models import estadoGasto
+from ubicar.models import estadoGasto, tipoDeGasto
 from ubicar.api.serializer import VehiculoSerializer
 from ubicar.api.serializer import AdministradorSerializer
 from ubicar.api.serializer import ConductorSerializer
@@ -26,6 +26,7 @@ from ubicar.api.serializer import PosicionSerializer
 from ubicar.api.serializer import GastoSerializer
 from ubicar.api.serializer import AlertaSerializer
 from ubicar.api.serializer import AsignacionVehiculoSerializer
+from ubicar.api.serializer import TipoDeGastoSerializer
 
 class VehiculoViewsSet(viewsets.ModelViewSet):
     queryset= Vehiculo.objects.all()
@@ -265,6 +266,11 @@ class GastoViewsSet(viewsets.ModelViewSet):
      return Response({
         'mensaje': 'Gasto rechazado correctamente'
      })
+
+class TipoDeGastoViewSet(viewsets.ReadOnlyModelViewSet):
+    """Catálogo de tipos de gasto (combustible, peaje, otros) para el formulario de carga."""
+    queryset = tipoDeGasto.objects.all()
+    serializer_class = TipoDeGastoSerializer
 
 class AlertaViewsSet(viewsets.ModelViewSet):
     queryset= Alerta.objects.all()

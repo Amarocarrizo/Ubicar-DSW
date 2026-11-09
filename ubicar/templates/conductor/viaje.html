@@ -1,0 +1,174 @@
+{% extends "conductor/base_conductor.html" %}
+{% block titulo %}Viaje en curso · UBICAR{% endblock %}
+
+{% block cabecera %}
+<div class="m-fila">
+  <a class="icono-btn" href="/conductor/">←</a>
+  <h1>Viaje <span id="numero"></span></h1>
+  <span class="chip chip-gris" id="chip-estado" style="margin-left:auto">…</span>
+</div>
+{% endblock %}
+
+{% block contenido %}
+<div class="estado-viaje espera" id="banner"><span>Preparando el viaje…</span><span class="gps" id="gps"><span class="punto punto-gris"></span>GPS</span></div>
+
+<div class="tarjeta" style="padding:10px">
+  <div class="mapa" id="mapa" style="height:280px"></div>
+  <div class="leyenda"><span><i></i>Ruta planificada</span><span><i class="real"></i>Recorrido real</span></div>
+</div>
+
+<div class="tarjeta">
+  <b id="ruta-texto" style="font-size:14px">—</b>
+  <div class="ayuda" id="vehiculo-texto" style="margin-bottom:10px">—</div>
+  <div class="datos">
+    <div class="dato"><div class="rotulo">Distancia estimada</div><div class="valor" id="distancia">—</div></div>
+    <div class="dato"><div class="rotulo">Tiempo transcurrido</div><div class="valor" id="transcurrido">—</div></div>
+    <div class="dato"><div class="rotulo">Última posición enviada</div><div class="valor" id="ultima">—</div></div>
+    <div class="dato"><div class="rotulo">Posiciones enviadas</div><div class="valor" id="cantidad">0</div></div>
+  </div>
+</div>
+
+<div class="tarjeta simulacion oculto" id="simulacion">
+  <p class="titulo-seccion" style="color:var(--naranja)">Modo simulación (demo)</p>
+  <div class="ayuda" style="margin-bottom:10px">Recorre la ruta automáticamente enviando posiciones como si fuera el GPS.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-borde btn-chico" id="sim-play">▶ Reproducir</button>
+    <button class="btn btn-rojo-borde btn-chico" id="sim-desvio">Simular desvío</button>
+    <button class="btn btn-borde btn-chico" id="sim-volver">Volver a la ruta</button>
+  </div>
+</div>
+
+<div class="error-msg oculto" id="error"></div>
+<div style="display:grid;gap:10px">
+  <a class="btn btn-borde btn-ancho" id="boton-gasto" href="/conductor/gasto/">▤ &nbsp;Cargar gasto</a>
+  <button class="btn btn-azul btn-ancho" id="finalizar" disabled style="padding:15px">Finalizar viaje</button>
+</div>
+{% endblock %}
+
+{% block script_pantalla %}
+<script>
+(async () => {
+  const me = await Conductor.iniciar();
+  if (!me) return;
+  const $ = id => document.getElementById(id);
+  const ID = {{ id_viaje }};
+  const CADA_MS = 8000;                                  // cada cuánto se manda la posición al servidor
+  const SIMULAR = localStorage.getItem('simular') === '1'; // se activa desde Perfil
+
+  let viaje, puntosRuta = [], recorrido = [], capaRecorrido = null, marcador = null;
+  let ultimaPos = null, ultimaEnviada = null, enviadas = 0;
+
+  $('numero').textContent = Conductor.numero(ID);
+
+  // --- Estado del viaje en pantalla ---
+  function enCurso() { return viaje.hora_inicio && !viaje.hora_llegada && viaje.estado !== 'CANCELADO'; }
+  function pintarEstado() {
+    // El backend deja el viaje en PENDIENTE cuando detecta un desvío: si ya arrancó, eso significa "desviado".
+    const desviado = viaje.hora_inicio && viaje.estado === 'PENDIENTE';
+    const [etiqueta, color] = desviado ? ['Desviado', 'rojo'] : Conductor.estado(viaje.estado);
+    $('chip-estado').className = 'chip chip-' + color; $('chip-estado').textContent = etiqueta;
+    const banner = $('banner'), texto = banner.firstElementChild;
+    if (desviado) { banner.className = 'estado-viaje alerta'; texto.textContent = '⚠ Te alejaste de la ruta planificada'; }
+    else if (!viaje.hora_inicio) { banner.className = 'estado-viaje espera'; texto.textContent = 'Esperando la primera posición del GPS para iniciar…'; }
+    else if (enCurso()) { banner.className = 'estado-viaje ok'; texto.textContent = '● Viaje en curso · enviando ubicación'; }
+    else { banner.className = 'estado-viaje espera'; texto.textContent = 'Viaje ' + etiqueta.toLowerCase(); }
+    $('finalizar').disabled = !enCurso();
+    $('boton-gasto').classList.toggle('oculto', !enCurso());
+  }
+  function gps(color, texto) { $('gps').innerHTML = `<span class="punto punto-${color}"></span>${texto}`; }
+
+  async function cargarViaje() {
+    viaje = await API.get('/api/viaje/' + ID + '/');
+    $('ruta-texto').textContent = viaje.ruta.origen + ' → ' + viaje.ruta.destino;
+    $('vehiculo-texto').textContent = (viaje.vehiculo ? viaje.vehiculo.modelo + ' · ' + viaje.vehiculo.patente : '') + ' · ' + F.fecha(viaje.hora_inicio || new Date().toISOString());
+    $('distancia').textContent = F.km(viaje.ruta.distancia_estimada);
+    pintarEstado();
+  }
+
+  // --- Mapa ---
+  function pintarPosicion(p) {
+    recorrido.push(p);
+    if (marcador) marcador.setLatLng([p.lat, p.lon]); else marcador = Mapa.marcador(mapa, p.lat, p.lon, '#dc2626', '🚚');
+    if (capaRecorrido) mapa.removeLayer(capaRecorrido);
+    capaRecorrido = Mapa.dibujarRecorrido(mapa, recorrido);
+  }
+
+  // --- Envío al backend: la primera posición inicia el viaje, las siguientes se registran ---
+  async function enviar(p) {
+    try {
+      const accion = viaje.hora_inicio ? 'posicion' : 'iniciar';
+      await API.post(`/api/viaje/${ID}/${accion}/`, { latitud: p.lat, longitud: p.lon });
+      enviadas++; ultimaEnviada = Date.now();
+      $('cantidad').textContent = enviadas; $('ultima').textContent = F.hora(new Date().toISOString());
+      $('error').classList.add('oculto');
+      await cargarViaje(); // refresca el estado (puede haber pasado a desviado)
+    } catch (e) {
+      $('error').textContent = 'No se pudo enviar la posición: ' + e.message; $('error').classList.remove('oculto');
+    }
+  }
+  function nuevaPosicion(lat, lon) {
+    ultimaPos = { lat, lon, t: Date.now() };
+    pintarPosicion(ultimaPos);
+    if (!viaje.hora_inicio) enviar(ultimaPos); // primera posición: inicia el viaje sin esperar al timer
+  }
+  setInterval(() => { if (ultimaPos && enCurso() && ultimaPos.t > (ultimaEnviada || 0)) enviar(ultimaPos); }, CADA_MS);
+
+  // --- GPS real del navegador ---
+  function iniciarGPS() {
+    if (!navigator.geolocation) return gps('rojo', 'Sin GPS');
+    gps('naranja', 'Buscando GPS…');
+    navigator.geolocation.watchPosition(
+      pos => { gps('verde', 'GPS ±' + Math.round(pos.coords.accuracy) + ' m'); nuevaPosicion(pos.coords.latitude, pos.coords.longitude); },
+      err => gps('rojo', err.code === 1 ? 'GPS: permiso denegado' : 'GPS: sin señal'),
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
+  }
+
+  // --- Simulación: recorre los puntos de la ruta de OSRM como si fuera el GPS ---
+  function iniciarSimulacion() {
+    $('simulacion').classList.remove('oculto');
+    gps('naranja', 'GPS simulado');
+    let i = 0, timer = null, desviado = false;
+    const paso = Math.max(1, Math.floor(puntosRuta.length / 40)); // ~40 posiciones por viaje
+    const avanzar = () => {
+      const p = puntosRuta[Math.min(i, puntosRuta.length - 1)];
+      const corrimiento = desviado ? 0.006 : 0; // ~900 m fuera de la ruta (el umbral del backend es 200 m)
+      nuevaPosicion(p.lat + corrimiento, p.lon + corrimiento);
+      i = Math.min(i + paso, puntosRuta.length - 1);
+    };
+    $('sim-play').onclick = () => {
+      if (timer) { clearInterval(timer); timer = null; $('sim-play').textContent = '▶ Reproducir'; }
+      else { avanzar(); timer = setInterval(avanzar, 3000); $('sim-play').textContent = '⏸ Pausar'; }
+    };
+    $('sim-desvio').onclick = () => { desviado = true; avanzar(); };
+    $('sim-volver').onclick = () => { desviado = false; avanzar(); };
+    avanzar();
+  }
+
+  $('finalizar').onclick = async () => {
+    try { await API.post(`/api/viaje/${ID}/finalizar/`); aviso('Viaje finalizado'); setTimeout(() => location.href = '/conductor/', 900); }
+    catch (e) { aviso(e.message, true); }
+  };
+
+  // --- Arranque ---
+  await cargarViaje();
+  const mapa = Mapa.crear('mapa', 11);
+  puntosRuta = Mapa.puntos(viaje.ruta.geometria_ruta);
+  if (puntosRuta.length) Mapa.encuadrar(mapa, [Mapa.dibujarRuta(mapa, viaje.ruta.geometria_ruta)]);
+
+  // posiciones ya guardadas (si se vuelve a abrir la pantalla)
+  const previas = (await API.get('/api/posicion/')).filter(p => p.id_viaje === ID).sort((a, b) => a.hora.localeCompare(b.hora));
+  previas.forEach(p => pintarPosicion({ lat: +p.posicion_x, lon: +p.posicion_y }));
+  enviadas = previas.length; $('cantidad').textContent = enviadas;
+  if (previas.length) $('ultima').textContent = F.hora(previas[previas.length - 1].hora);
+
+  setInterval(() => {
+    if (!viaje.hora_inicio) return;
+    const fin = viaje.hora_llegada ? new Date(viaje.hora_llegada) : new Date();
+    const min = Math.max(0, Math.round((fin - new Date(viaje.hora_inicio)) / 60000));
+    $('transcurrido').textContent = min < 60 ? min + ' min' : Math.floor(min / 60) + ' h ' + (min % 60) + ' min';
+  }, 1000);
+
+  if (!viaje.hora_llegada && viaje.estado !== 'CANCELADO') { if (SIMULAR) iniciarSimulacion(); else iniciarGPS(); }
+})();
+</script>
+{% endblock %}
