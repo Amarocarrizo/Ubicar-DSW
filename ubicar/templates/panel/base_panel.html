@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block cuerpo %}
+<header class="p-cabecera">
+  <div class="interior">
+    <a class="marca" href="/panel/"><span class="logo">◎</span> UBICAR</a>
+    <nav>
+      <a href="/panel/">Flota en vivo</a>
+      <a href="/panel/gastos/">Auditoría de Gastos</a>
+      <a href="/panel/desvios/">Auditoría de Desvíos</a>
+      <a href="/admin/" target="_blank">Administración</a>
+    </nav>
+    <div class="usuario"><b>Panel Administrador</b><span data-nombre></span></div>
+    <div class="inicial" data-inicial></div>
+    <button class="salir" data-salir>Salir</button>
+  </div>
+</header>
+<main class="p-contenido">
+  {% block contenido %}{% endblock %}
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{% static 'ubicar/mapa.js' %}"></script>
+<script src="{% static 'ubicar/panel.js' %}"></script>
+{% block script_pantalla %}{% endblock %}
+{% endblock %}

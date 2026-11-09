@@ -19,7 +19,7 @@
   </div>
   <div class="campo">
     <label>Comprobante</label>
-    <label class="subir"><input id="comprobante" type="file" accept="image/*" capture="environment" required><div id="subir-texto">🖼<br>Subir imagen</div></label>
+    <label class="subir"><input id="comprobante" type="file" accept="image/*" capture="environment"><div id="subir-texto">🖼<br>Subir imagen</div></label>
   </div>
   <div class="error-msg oculto" id="error"></div>
   <button class="btn btn-azul btn-ancho" id="enviar" type="submit" style="padding:15px">Cargar Gasto</button>
@@ -54,7 +54,9 @@
   // Se manda como FormData (multipart) porque lleva un archivo.
   $('form').onsubmit = async e => {
     e.preventDefault();
-    $('enviar').disabled = true; $('error').classList.add('oculto');
+    $('error').classList.add('oculto');
+    if (!$('comprobante').files[0]) { $('error').textContent = 'Adjuntá la foto del comprobante.'; $('error').classList.remove('oculto'); return; }
+    $('enviar').disabled = true;
     const datos = new FormData();
     datos.append('tipo', $('tipo').value);
     datos.append('monto', $('monto').value);

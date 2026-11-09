@@ -1,0 +1,91 @@
+{% extends "panel/base_panel.html" %}
+{% block titulo %}Auditoría de gastos · UBICAR{% endblock %}
+
+{% block contenido %}
+<div class="p-titulo"><h1>Auditoría de Gastos</h1><div class="sub">Gestión de Flota y Control de Viajes</div></div>
+
+<div class="kpis">
+  <div class="kpi"><div class="rotulo">Gastos pendientes</div><div class="valor" id="k-pendientes">—</div><div class="sub" id="k-pendientes-n"></div></div>
+  <div class="kpi verde"><div class="rotulo">Aprobados mes</div><div class="valor" id="k-aprobados">—</div><div class="sub" id="k-aprobados-n"></div></div>
+  <div class="kpi rojo"><div class="rotulo">Rechazados mes</div><div class="valor" id="k-rechazados">—</div><div class="sub" id="k-rechazados-n"></div></div>
+</div>
+
+<div class="tabla-caja">
+  <div class="tabla-cabecera">
+    <h2><span id="titulo-tabla">Comprobantes pendientes de revisión</span> <span class="contador" id="contador">0</span></h2>
+    <select id="filtro">
+      <option value="pendientes">Pendientes</option>
+      <option value="todos">Historial completo</option>
+      <option value="ACEPTADO">Aprobados</option>
+      <option value="RECHAZADO">Rechazados</option>
+    </select>
+  </div>
+  <table class="tabla">
+    <thead><tr><th>Conductor</th><th>Patente / Vehículo</th><th>Concepto de gasto</th><th>Fecha</th><th style="text-align:right">Importe</th><th style="text-align:right">Acciones de auditoría</th></tr></thead>
+    <tbody id="filas"></tbody>
+  </table>
+  <div class="nota">* Los gastos marcados "a revisar" no coinciden con los km registrados por GPS; el resto fue validado automáticamente.</div>
+</div>
+{% endblock %}
+
+{% block script_pantalla %}
+<script>
+(async () => {
+  const me = await Panel.iniciar();
+  if (!me) return;
+  const $ = id => document.getElementById(id);
+  let gastos = await API.get('/api/gasto/');
+  const PENDIENTES = ['PENDIENTE', 'VALIDADO', 'A_REVISAR']; // todavía sin decisión del administrador
+
+  // Tarjetas de arriba: suma de importes por estado.
+  function kpis() {
+    const esDeEsteMes = g => new Date(g.fecha_hora).getMonth() === new Date().getMonth();
+    const suma = lista => lista.reduce((s, g) => s + Number(g.monto), 0);
+    const pend = gastos.filter(g => PENDIENTES.includes(g.estado_nombre));
+    const apro = gastos.filter(g => g.estado_nombre === 'ACEPTADO' && esDeEsteMes(g));
+    const rech = gastos.filter(g => g.estado_nombre === 'RECHAZADO' && esDeEsteMes(g));
+    $('k-pendientes').textContent = F.plata(suma(pend)); $('k-pendientes-n').textContent = pend.length + ' pendientes';
+    $('k-aprobados').textContent = F.plata(suma(apro)); $('k-aprobados-n').textContent = apro.length + ' aprobados';
+    $('k-rechazados').textContent = F.plata(suma(rech)); $('k-rechazados-n').textContent = rech.length + ' rechazados';
+  }
+
+  // Tabla: una fila por gasto según el filtro elegido.
+  function tabla() {
+    const filtro = $('filtro').value;
+    const lista = gastos.filter(g => filtro === 'todos' || (filtro === 'pendientes' ? PENDIENTES.includes(g.estado_nombre) : g.estado_nombre === filtro));
+    $('contador').textContent = lista.length;
+    $('titulo-tabla').textContent = filtro === 'pendientes' ? 'Comprobantes pendientes de revisión' : 'Historial de comprobantes';
+    if (!lista.length) { $('filas').innerHTML = '<tr><td colspan="6" class="vacio">No hay comprobantes para mostrar.</td></tr>'; return; }
+    $('filas').innerHTML = lista.map(g => {
+      const [etiqueta, color] = Panel.ESTADO_GASTO[g.estado_nombre] || [g.estado_nombre, 'gris'];
+      const pendiente = PENDIENTES.includes(g.estado_nombre);
+      return `<tr>
+        <td class="nombre"><span class="punto punto-${color}"></span>${F.texto(Panel.conductor(g.viaje))}</td>
+        <td>${Panel.vehiculo(g.viaje)}</td>
+        <td>${Panel.TIPO_GASTO[g.tipo_nombre] || ''}<span class="sub">${Number(g.km_registrado).toLocaleString('es-AR')} km · <a href="${g.comprobante}" target="_blank" style="color:var(--azul)">ver comprobante</a></span></td>
+        <td>${F.fecha(g.fecha_hora)}<span class="sub">${F.hora(g.fecha_hora)} · ${Panel.numero(g.viaje)}</span></td>
+        <td class="plata">${F.plata(g.monto)}</td>
+        <td><div class="acciones">${pendiente
+          ? `<span class="chip chip-${color}">${etiqueta}</span>
+             <button class="btn btn-navy btn-chico" data-accion="aprobar" data-id="${g.id_gasto}">Aceptar</button>
+             <button class="btn btn-rojo-borde btn-chico" data-accion="rechazar" data-id="${g.id_gasto}">Rechazar</button>`
+          : `<span class="chip chip-${color}">${etiqueta}</span>`}</div></td>
+      </tr>`;
+    }).join('');
+
+    // Aceptar / Rechazar: el backend exige el id del administrador que decide.
+    $('filas').querySelectorAll('button[data-accion]').forEach(b => b.onclick = async () => {
+      b.disabled = true;
+      try {
+        await API.post(`/api/gasto/${b.dataset.id}/${b.dataset.accion}/`, { administrador: me.administrador.id_admin });
+        aviso(b.dataset.accion === 'aprobar' ? 'Gasto aprobado' : 'Gasto rechazado');
+        gastos = await API.get('/api/gasto/'); kpis(); tabla();
+      } catch (e) { aviso(e.message, true); b.disabled = false; }
+    });
+  }
+
+  kpis(); tabla();
+  $('filtro').onchange = tabla;
+})();
+</script>
+{% endblock %}

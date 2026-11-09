@@ -1,0 +1,84 @@
+{% extends "panel/base_panel.html" %}
+{% block titulo %}Auditoría de desvíos · UBICAR{% endblock %}
+
+{% block contenido %}
+<div class="p-titulo"><h1>Auditoría de Desvíos</h1><div class="sub">Gestión de Flota y Control de Viajes</div></div>
+
+<div class="kpis">
+  <div class="kpi"><div class="rotulo">Alertas pendientes</div><div class="valor" id="k-pendientes">—</div><div class="sub">Sin revisar</div></div>
+  <div class="kpi verde"><div class="rotulo">Revisadas hoy</div><div class="valor" id="k-revisadas">—</div><div class="sub">Sin novedad</div></div>
+  <div class="kpi rojo"><div class="rotulo">Confirmadas hoy</div><div class="valor" id="k-confirmadas">—</div><div class="sub">Irregularidad</div></div>
+</div>
+
+<div class="tabla-caja">
+  <div class="tabla-cabecera">
+    <h2><span id="titulo-tabla">Alertas pendientes de revisión</span> <span class="contador" id="contador">0</span></h2>
+    <select id="filtro">
+      <option value="PENDIENTE">Pendientes</option>
+      <option value="todos">Historial completo</option>
+      <option value="IRREGULARIDAD_CONFIRMADA">Confirmadas</option>
+      <option value="REVISADA_SIN_NOVEDAD">Revisadas sin novedad</option>
+    </select>
+  </div>
+  <table class="tabla">
+    <thead><tr><th>Conductor</th><th>Patente / Vehículo</th><th>Ruta asignada</th><th>Fecha</th><th>Tipo</th><th>Desvío</th><th style="text-align:right">Acciones de auditoría</th></tr></thead>
+    <tbody id="filas"></tbody>
+  </table>
+  <div class="nota">* Al confirmar una alerta el sistema registra la decisión con fecha, hora y administrador, y queda en el historial de auditoría.</div>
+</div>
+{% endblock %}
+
+{% block script_pantalla %}
+<script>
+(async () => {
+  const me = await Panel.iniciar();
+  if (!me) return;
+  const $ = id => document.getElementById(id);
+  let alertas = await API.get('/api/alerta/');
+  const esHoy = iso => iso && new Date(iso).toDateString() === new Date().toDateString();
+
+  function kpis() {
+    $('k-pendientes').textContent = alertas.filter(a => a.estado === 'PENDIENTE').length;
+    $('k-revisadas').textContent = alertas.filter(a => a.estado === 'REVISADA_SIN_NOVEDAD' && esHoy(a.fecha_revision)).length;
+    $('k-confirmadas').textContent = alertas.filter(a => a.estado === 'IRREGULARIDAD_CONFIRMADA' && esHoy(a.fecha_revision)).length;
+  }
+
+  function tabla() {
+    const filtro = $('filtro').value;
+    const lista = alertas.filter(a => filtro === 'todos' || a.estado === filtro).sort((a, b) => b.fecha_hora.localeCompare(a.fecha_hora));
+    $('contador').textContent = lista.length;
+    $('titulo-tabla').textContent = filtro === 'PENDIENTE' ? 'Alertas pendientes de revisión' : 'Historial de alertas';
+    if (!lista.length) { $('filas').innerHTML = '<tr><td colspan="7" class="vacio">No hay alertas para mostrar.</td></tr>'; return; }
+    $('filas').innerHTML = lista.map(a => {
+      const [etiqueta, color] = Panel.ESTADO_ALERTA[a.estado] || [a.estado, 'gris'];
+      const metros = Panel.metrosDesvio(a.descripcion);
+      return `<tr>
+        <td class="nombre"><span class="punto punto-${a.estado === 'PENDIENTE' ? 'rojo' : color}"></span>${F.texto(Panel.conductor(a.viaje))}</td>
+        <td>${Panel.vehiculo(a.viaje)}</td>
+        <td>${Panel.ruta(a.viaje)}<span class="sub">${Panel.numero(a.viaje)}</span></td>
+        <td>${F.fecha(a.fecha_hora)}<span class="sub">${F.hora(a.fecha_hora)}</span></td>
+        <td>${Panel.TIPO_ALERTA[a.tipo] || a.tipo}</td>
+        <td class="rojo-texto">${metros != null ? F.km(metros / 1000) : '—'}</td>
+        <td><div class="acciones">
+          <a class="btn btn-navy btn-chico" href="/panel/alerta/${a.id_alerta}/">Revisar</a>
+          ${a.estado === 'PENDIENTE' ? `<button class="btn btn-rojo-borde btn-chico" data-id="${a.id_alerta}">Irregular</button>` : `<span class="chip chip-${color}">${etiqueta}</span>`}
+        </div></td>
+      </tr>`;
+    }).join('');
+
+    // "Irregular" confirma la irregularidad directo desde la tabla.
+    $('filas').querySelectorAll('button[data-id]').forEach(b => b.onclick = async () => {
+      if (!confirm('¿Marcar la alerta como irregularidad confirmada?')) return;
+      try {
+        await API.post(`/api/alerta/${b.dataset.id}/confirmar/`, { administrador: me.administrador.id_admin });
+        aviso('Irregularidad confirmada');
+        alertas = await API.get('/api/alerta/'); kpis(); tabla();
+      } catch (e) { aviso(e.message, true); }
+    });
+  }
+
+  kpis(); tabla();
+  $('filtro').onchange = tabla;
+})();
+</script>
+{% endblock %}

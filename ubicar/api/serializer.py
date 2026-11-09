@@ -67,6 +67,7 @@ class GastoSerializer(serializers.ModelSerializer):
             source='estado.estado',
             read_only=True
             )
+    tipo_nombre = serializers.CharField(source='tipo.razon_del_gasto', read_only=True)
     class Meta:
         model = Gasto
         fields = '__all__'

@@ -1,0 +1,82 @@
+{% extends "panel/base_panel.html" %}
+{% block titulo %}Detalle de alerta · UBICAR{% endblock %}
+
+{% block contenido %}
+<a class="volver" href="/panel/desvios/">← Volver</a>
+<div class="p-titulo" style="margin-top:8px"><h1>Detalle de alerta <span id="numero"></span></h1><div class="sub">Auditoría de desvíos de ruta</div></div>
+
+<div class="tabla-caja" style="padding:22px">
+  <div class="detalle-cabecera">
+    <div><h3 id="titulo">Alerta</h3><div class="ayuda" id="subtitulo"></div><div style="margin-top:8px;font-size:13px" id="descripcion"></div></div>
+    <span class="chip chip-gris" id="chip-estado">…</span>
+  </div>
+  <div class="titulo-seccion" style="margin-top:18px">Ruta asociada: <span id="ruta" style="color:var(--texto)"></span></div>
+  <div class="mapa" id="mapa" style="height:360px"></div>
+  <div class="leyenda"><span><i class="punteada"></i>Ruta planificada</span><span><i class="real"></i>Recorrido real</span><span><span class="punto punto-rojo"></span> Posición al momento de la alerta</span></div>
+  <div class="stats3">
+    <div class="resaltado"><div class="rotulo">Distancia desviada</div><div class="valor" id="s-distancia">—</div></div>
+    <div><div class="rotulo">Duración del viaje</div><div class="valor" id="s-duracion">—</div></div>
+    <div><div class="rotulo">Hora de la alerta</div><div class="valor" id="s-hora">—</div></div>
+  </div>
+  <div class="decision">
+    <button class="confirmar" id="confirmar"><span>Estado</span>Confirmada (irregularidad)</button>
+    <button class="revisar" id="revisar"><span>Estado</span>Revisado (sin novedad)</button>
+  </div>
+  <div style="margin-top:18px"><a class="volver" href="/panel/desvios/">← Volver a la lista</a></div>
+</div>
+{% endblock %}
+
+{% block script_pantalla %}
+<script>
+(async () => {
+  const me = await Panel.iniciar();
+  if (!me) return;
+  const $ = id => document.getElementById(id);
+  const ID = {{ id_alerta }};
+  let alerta = await API.get('/api/alerta/' + ID + '/');
+  const viaje = Panel.viajes[alerta.viaje];
+
+  // Encabezado y datos.
+  $('numero').textContent = '#A-' + ID;
+  $('titulo').textContent = `Alerta #A-${ID} · ${Panel.TIPO_ALERTA[alerta.tipo] || alerta.tipo}`;
+  $('subtitulo').textContent = `${F.fecha(alerta.fecha_hora)} ${F.hora(alerta.fecha_hora)} · ${Panel.conductor(alerta.viaje)} · ${viaje.vehiculo ? viaje.vehiculo.patente + ' ' + viaje.vehiculo.modelo : ''}`;
+  $('descripcion').textContent = alerta.descripcion;
+  $('ruta').innerHTML = Panel.ruta(alerta.viaje);
+  const metros = Panel.metrosDesvio(alerta.descripcion);
+  $('s-distancia').textContent = metros == null ? '—' : metros >= 1000 ? F.km(metros / 1000) : Math.round(metros) + ' m';
+  const fin = viaje.hora_llegada ? new Date(viaje.hora_llegada) : new Date();
+  $('s-duracion').textContent = viaje.hora_inicio ? Math.round((fin - new Date(viaje.hora_inicio)) / 60000) + ' min' : '—';
+  $('s-hora').textContent = F.hora(alerta.fecha_hora);
+
+  function pintarEstado() {
+    const [etiqueta, color] = Panel.ESTADO_ALERTA[alerta.estado] || [alerta.estado, 'gris'];
+    $('chip-estado').className = 'chip chip-' + color; $('chip-estado').textContent = etiqueta;
+    $('confirmar').disabled = $('revisar').disabled = alerta.estado !== 'PENDIENTE';
+  }
+  pintarEstado();
+
+  // Mapa: ruta planificada (punteada) vs. recorrido real (rojo) y la posición más cercana a la hora de la alerta.
+  const mapa = Mapa.crear('mapa', 12);
+  const capas = [];
+  if (viaje.ruta.geometria_ruta) capas.push(Mapa.dibujarRuta(mapa, viaje.ruta.geometria_ruta, '#64748b', true));
+  const posiciones = (await API.get('/api/posicion/')).filter(p => p.id_viaje === viaje.id_viaje).sort((a, b) => a.hora.localeCompare(b.hora))
+                       .map(p => ({ lat: +p.posicion_x, lon: +p.posicion_y, hora: p.hora }));
+  if (posiciones.length) capas.push(Mapa.dibujarRecorrido(mapa, posiciones));
+  const t = new Date(alerta.fecha_hora);
+  const cercana = posiciones.reduce((mejor, p) => (!mejor || Math.abs(new Date(p.hora) - t) < Math.abs(new Date(mejor.hora) - t)) ? p : mejor, null);
+  if (cercana) capas.push(Mapa.marcador(mapa, cercana.lat, cercana.lon, '#dc2626', '!'));
+  Mapa.encuadrar(mapa, capas);
+
+  // Decisión del administrador: confirmar irregularidad o revisar sin novedad.
+  async function decidir(accion, mensaje) {
+    try {
+      await API.post(`/api/alerta/${ID}/${accion}/`, { administrador: me.administrador.id_admin });
+      alerta = await API.get('/api/alerta/' + ID + '/');
+      pintarEstado(); aviso(mensaje);
+    } catch (e) { aviso(e.message, true); }
+  }
+  $('confirmar').onclick = () => decidir('confirmar', 'Irregularidad confirmada');
+  $('revisar').onclick = () => decidir('sin_novedad', 'Alerta revisada sin novedad');
+})();
+</script>
+{% endblock %}
