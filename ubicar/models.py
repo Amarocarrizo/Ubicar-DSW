@@ -13,6 +13,13 @@ from datetime import timedelta
 
 class Administrador(models.Model):
     id_admin=models.AutoField(primary_key=True)
+    usuario = models.OneToOneField(
+    User,
+    on_delete=models.CASCADE,
+    related_name='administrador',
+    null=True,
+    blank=True
+    )
     nombre=models.CharField(max_length=30)
     apellido=models.CharField(max_length=30)
     mail=models.CharField(max_length=254)
