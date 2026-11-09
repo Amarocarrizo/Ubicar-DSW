@@ -155,9 +155,9 @@ class Viaje(models.Model):
     def __str__(self):
         return f"Viaje: {self.id_viaje}"
 
-    def iniciar_viaje(self, latitud_inicial, longitud_inicial):
-         if self.estado != 'ASIGNADO':
-          raise ValueError('Solo se puede iniciar un viaje que esté ASIGNADO')
+    def iniciar_viaje(self, latitud_inicial=None, longitud_inicial=None):
+         if self.estado == EstadoViaje.EN_CURSO:
+           raise ValueError('El viaje ya está en curso')
 
          if self.id_conductor is None:
           raise ValueError('El viaje no tiene conductor asignado')
@@ -186,15 +186,48 @@ class Viaje(models.Model):
          self.estado = EstadoViaje.EN_CURSO
          self.hora_inicio = timezone.now()
          self.save()
-         self.registrar_posicion(latitud_inicial, longitud_inicial)
+         if latitud_inicial is not None and longitud_inicial is not None:
+          self.registrar_posicion(latitud_inicial, longitud_inicial)
+    def _calcular_distancia_a_ruta(self, lat_actual, lon_actual):
+        """Calcula la distancia mínima en metros entre la posición actual 
+           y los puntos de la geometría de la ruta guardada en JSON.
+        """
+        if not self.id_ruta or not self.id_ruta.geometria_ruta:
+            return 0 # Si no hay ruta o geometría guardada, no hay desvío medible
 
-    def rechazar_viaje(self):
-        """El chofer rechaza el viaje asignado."""
-        if self.estado != 'ASIGNADO':
-            raise ValueError('Solo se puede rechazar un viaje que esté ASIGNADO')
-        
-        self.estado = 'RECHAZADO'
-        self.save()
+        geometria = self.id_ruta.geometria_ruta
+        coordenadas = []
+
+        # Dependiendo de cómo guardes el JSON de OSRM (GeoJSON o array de coords)
+        # Si guardas el GeoJSON de OSRM estándar (LineString), las coordenadas vienen como [lon, lat]
+        if isinstance(geometria, dict) and 'coordinates' in geometria:
+            coordenadas = geometria['coordinates'] # [[lon, lat], [lon, lat], ...]
+        elif isinstance(geometria, list):
+            coordenadas = geometria
+
+        min_distancia = float('inf')
+        lat1 = radians(float(lat_actual))
+        lon1 = radians(float(lon_actual))
+
+        # Radio de la Tierra en metros
+        R = 6371000 
+
+        for punto in coordenadas:
+            # OSRM guarda [longitud, latitud]
+            lon2 = radians(float(punto[0]))
+            lat2 = radians(float(punto[1]))
+
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+
+            a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
+            c = 2 * atan2(sqrt(a), sqrt(1 - a))
+            distancia = R * c
+
+            if distancia < min_distancia:
+                min_distancia = distancia
+
+        return min_distancia # Retorna la distancia en metros al punto más cercano de la ruta
 
     def registrar_posicion(self, latitud, longitud):
         # 1- Guardar la posición actual en la base de datos

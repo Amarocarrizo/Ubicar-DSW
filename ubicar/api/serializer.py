@@ -45,6 +45,10 @@ class ViajeSerializer(serializers.ModelSerializer):
     class Meta:
         model= Viaje
         fields= '__all__'
+        read_only_fields = [
+            'id_conductor',
+            'hora_inicio'
+        ]
 
 class GastoSerializer(serializers.ModelSerializer):
     class Meta:
