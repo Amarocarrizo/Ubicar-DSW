@@ -14,6 +14,7 @@ from rest_framework.response import Response
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
 from rest_framework import serializers
 from ubicar.models import estadoGasto
 from ubicar.api.serializer import VehiculoSerializer
@@ -293,3 +294,43 @@ class AlertaViewsSet(viewsets.ModelViewSet):
         'mensaje': 'Alerta revisada sin novedad'
      })
 
+
+
+class MeView(APIView):
+    """GET /api/me/ -> quién está logueado, su rol y sus datos.
+
+    El front lo llama después del login para saber qué pantalla mostrar
+    (conductor o administrador) y con qué id de administrador aprobar/rechazar.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        conductor = Conductor.objects.filter(usuario=user).first()
+        # Administrador no está ligado a User: se lo reconoce por el mail.
+        administrador = Administrador.objects.filter(mail=user.email).first()
+
+        if administrador or user.is_staff:
+            rol = 'admin'
+        elif conductor:
+            rol = 'conductor'
+        else:
+            rol = 'sin_rol'
+
+        vehiculo = None
+        if conductor:
+            hoy = timezone.now().date()
+            asignacion = AsignacionVehiculo.objects.filter(
+                conductor=conductor, activa=True,
+                fecha_desde__lte=hoy, fecha_hasta__gte=hoy,
+            ).first()
+            if asignacion:
+                vehiculo = VehiculoSerializer(asignacion.vehiculo).data
+
+        return Response({
+            'username': user.username,
+            'rol': rol,
+            'conductor': ConductorSerializer(conductor).data if conductor else None,
+            'administrador': AdministradorSerializer(administrador).data if administrador else None,
+            'vehiculo_asignado': vehiculo,
+        })

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block titulo %}Ingresar · UBICAR{% endblock %}
+
+{% block cuerpo %}
+<div class="login-fondo">
+  <form class="login-caja" id="form">
+    <div class="marca"><span class="logo">◎</span> UBICAR</div>
+    <h1>Ingresar</h1>
+    <p>Gestión de flota y control de viajes</p>
+
+    <div class="campo">
+      <label for="usuario">Usuario</label>
+      <input id="usuario" autocomplete="username" required autofocus>
+    </div>
+    <div class="campo">
+      <label for="clave">Contraseña</label>
+      <input id="clave" type="password" autocomplete="current-password" required>
+    </div>
+
+    <div class="error-msg oculto" id="error"></div>
+    <button class="btn btn-azul btn-ancho" id="boton" type="submit">Entrar</button>
+
+    <div class="login-demo">
+      Usuarios de prueba: <code>admin</code> / <code>admin1234</code> · <code>carlos</code> / <code>carlos1234</code>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Según el rol que devuelve /api/me/, cada usuario va a su pantalla.
+function irAInicio(me) {
+  if (me.rol === 'admin') location.href = '/panel/';
+  else if (me.rol === 'conductor') location.href = '/conductor/';
+  else throw new Error('El usuario no es conductor ni administrador.');
+}
+
+document.getElementById('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const boton = document.getElementById('boton'), error = document.getElementById('error');
+  boton.disabled = true;
+  error.classList.add('oculto');
+  try {
+    await API.login(document.getElementById('usuario').value.trim(), document.getElementById('clave').value);
+    irAInicio(await API.me());
+  } catch (ex) {
+    error.textContent = ex.message;
+    error.classList.remove('oculto');
+    boton.disabled = false;
+  }
+});
+
+// Si ya había una sesión guardada, no hace falta volver a loguearse.
+if (API.token()) API.me().then(irAInicio).catch(() => localStorage.clear());
+</script>
+{% endblock %}

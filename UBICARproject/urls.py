@@ -26,6 +26,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/',include('ubicar.api.urls')),
     path('mapa/', views.ver_mapa),
+
+    # Pantallas (front)
+    path('', views.home),
+    path('login/', views.login_view),
     path(
         'api/login/',
         TokenObtainPairView.as_view(),
