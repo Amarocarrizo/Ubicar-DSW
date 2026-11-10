@@ -85,7 +85,7 @@
     capaRuta = Mapa.dibujarRuta(mapa, ruta.geometria);
     Mapa.encuadrar(mapa, [capaRuta]);
     $('distancia').textContent = F.km(ruta.distanciaKm);
-    $('tiempo').textContent = F.duracion(ruta.duracionMin);
+    $('tiempo').textContent = F.duracion ? F.duracion(ruta.duracionMin) : Math.round(ruta.duracionMin) + ' min';
     $('estado-ruta').textContent = 'Ruta sugerida'; $('estado-ruta').className = 'chip chip-verde';
     $('confirmar').disabled = !vehiculo;
   }

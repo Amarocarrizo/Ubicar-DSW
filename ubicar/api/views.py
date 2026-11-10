@@ -83,7 +83,7 @@ class ViajeViewsSet(viewsets.ModelViewSet):
      usuario = self.request.user
 
      # Admin ve todos los viajes
-     if hasattr(usuario, 'administrador'):
+     if hasattr(usuario, 'administrador') or usuario.is_staff or usuario.is_superuser:
         return Viaje.objects.all()
 
      # Conductor ve solamente sus viajes
@@ -220,6 +220,17 @@ class PosicionViewsSet(viewsets.ReadOnlyModelViewSet):
     queryset= Posicion.objects.all()
     serializer_class= PosicionSerializer
     permission_classes = [EsAdministrador]
+
+    def get_queryset(self):
+        usuario = self.request.user
+        if hasattr(usuario, 'administrador') or usuario.is_staff or usuario.is_superuser:
+            id_viaje = self.request.query_params.get('id_viaje')
+            if id_viaje:
+                return Posicion.objects.filter(id_viaje_id=id_viaje)
+            return Posicion.objects.all()
+        if hasattr(usuario, 'conductor'):
+            return Posicion.objects.filter(id_viaje__id_conductor=usuario.conductor)
+        return Posicion.objects.none()
 
 class GastoViewsSet(viewsets.ModelViewSet):
     queryset = Gasto.objects.all()

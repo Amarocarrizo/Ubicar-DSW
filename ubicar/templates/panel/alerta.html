@@ -11,8 +11,13 @@
     <span class="chip chip-gris" id="chip-estado">…</span>
   </div>
   <div class="titulo-seccion" style="margin-top:18px">Ruta asociada: <span id="ruta" style="color:var(--texto)"></span></div>
-  <div class="mapa" id="mapa" style="height:360px"></div>
-  <div class="leyenda"><span><i class="punteada"></i>Ruta planificada</span><span><i class="real"></i>Recorrido real</span><span><span class="punto punto-rojo"></span> Posición al momento de la alerta</span></div>
+  <div class="mapa" id="mapa" style="height:420px;border-radius:10px;border:1px solid var(--borde)"></div>
+  <div class="leyenda" style="margin-top:12px;font-size:12px;gap:20px;flex-wrap:wrap">
+    <span><i class="punteada"></i> Ruta planificada</span>
+    <span><i class="real"></i> Recorrido del vehículo</span>
+    <span><span class="punto punto-rojo"></span> <b>⚠ Punto de desvío detectado</b></span>
+    <span><span class="punto punto-verde"></span> <b>🚚 Posición actual</b></span>
+  </div>
   <div class="stats3">
     <div class="resaltado"><div class="rotulo">Distancia desviada</div><div class="valor" id="s-distancia">—</div></div>
     <div><div class="rotulo">Duración del viaje</div><div class="valor" id="s-duracion">—</div></div>
@@ -55,16 +60,83 @@
   }
   pintarEstado();
 
-  // Mapa: ruta planificada (punteada) vs. recorrido real (rojo) y la posición más cercana a la hora de la alerta.
+  // Mapa: ruta planificada (punteada) vs. recorrido real y marcadores destacados
   const mapa = Mapa.crear('mapa', 12);
   const capas = [];
-  if (viaje.ruta.geometria_ruta) capas.push(Mapa.dibujarRuta(mapa, viaje.ruta.geometria_ruta, '#64748b', true));
-  const posiciones = (await API.get('/api/posicion/')).filter(p => p.id_viaje === viaje.id_viaje).sort((a, b) => a.hora.localeCompare(b.hora))
-                       .map(p => ({ lat: +p.posicion_x, lon: +p.posicion_y, hora: p.hora }));
-  if (posiciones.length) capas.push(Mapa.dibujarRecorrido(mapa, posiciones));
-  const t = new Date(alerta.fecha_hora);
-  const cercana = posiciones.reduce((mejor, p) => (!mejor || Math.abs(new Date(p.hora) - t) < Math.abs(new Date(mejor.hora) - t)) ? p : mejor, null);
-  if (cercana) capas.push(Mapa.marcador(mapa, cercana.lat, cercana.lon, '#dc2626', '!'));
+
+  // 1. Obtener datos del viaje directamente para garantizar la geometría y atributos
+  let viajeObj = viaje;
+  const idViajeActual = alerta.viaje || (viaje && viaje.id_viaje);
+  if (!viajeObj || !viajeObj.ruta) {
+    try {
+      viajeObj = await API.get('/api/viaje/' + idViajeActual + '/');
+    } catch (e) {
+      console.warn('No se pudo obtener viaje individual:', e);
+    }
+  }
+
+  // 2. Ruta oficial planificada (azul punteada clara)
+  if (viajeObj && viajeObj.ruta && viajeObj.ruta.geometria_ruta) {
+    capas.push(Mapa.dibujarRuta(mapa, viajeObj.ruta.geometria_ruta, '#3b82f6', true));
+  }
+
+  // 3. Historial de posiciones enviadas por el vehículo
+  let todasPos = [];
+  try {
+    todasPos = await API.get('/api/posicion/?id_viaje=' + idViajeActual);
+    if (!todasPos || !todasPos.length) {
+      todasPos = await API.get('/api/posicion/');
+    }
+  } catch (err) {
+    console.error('Error cargando posiciones:', err);
+  }
+
+  const posiciones = (todasPos || [])
+    .filter(p => {
+      const vid = p.id_viaje != null ? (p.id_viaje.id_viaje || p.id_viaje) : null;
+      return Number(vid) === Number(idViajeActual);
+    })
+    .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
+    .map(p => ({ lat: parseFloat(p.posicion_x), lon: parseFloat(p.posicion_y), hora: p.hora }))
+    .filter(p => !isNaN(p.lat) && !isNaN(p.lon));
+
+  if (posiciones.length) {
+    // Línea del recorrido hecho por el vehículo
+    capas.push(Mapa.dibujarRecorrido(mapa, posiciones, '#ef4444'));
+
+    // Origen del viaje (primer punto)
+    const inicio = posiciones[0];
+    const mInicio = Mapa.marcador(mapa, inicio.lat, inicio.lon, '#10b981', 'A')
+      .bindPopup(`<b>Inicio del viaje</b><br>${F.hora(inicio.hora)}`);
+    capas.push(mInicio);
+
+    // Posición exacta al momento del desvío
+    const t = new Date(alerta.fecha_hora).getTime();
+    const posDesvio = posiciones.reduce((mejor, p) => {
+      if (!mejor) return p;
+      const diffP = Math.abs(new Date(p.hora).getTime() - t);
+      const diffMejor = Math.abs(new Date(mejor.hora).getTime() - t);
+      return diffP < diffMejor ? p : mejor;
+    }, null);
+
+    if (posDesvio) {
+      const mDesvio = Mapa.marcador(mapa, posDesvio.lat, posDesvio.lon, '#dc2626', '⚠')
+        .bindPopup(`<b>⚠ Punto de desvío detectado</b><br>Hora: ${F.hora(posDesvio.hora)}<br>Desvío: ${$('s-distancia').textContent}`);
+      capas.push(mDesvio);
+      setTimeout(() => mDesvio.openPopup(), 400);
+    }
+
+    // Posición actual o última del vehículo
+    const ultima = posiciones[posiciones.length - 1];
+    if (ultima && (!posDesvio || Math.abs(ultima.lat - posDesvio.lat) > 0.0001 || Math.abs(ultima.lon - posDesvio.lon) > 0.0001)) {
+      const mUltima = Mapa.marcador(mapa, ultima.lat, ultima.lon, '#2563eb', '🚚')
+        .bindPopup(`<b>🚚 Última posición registrada</b><br>${F.hora(ultima.hora)}`);
+      capas.push(mUltima);
+    }
+  } else {
+    console.warn('No se encontraron posiciones registradas para el viaje:', idViajeActual);
+  }
+
   Mapa.encuadrar(mapa, capas);
 
   // Decisión del administrador: confirmar irregularidad o revisar sin novedad.
