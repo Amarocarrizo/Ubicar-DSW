@@ -61,7 +61,13 @@
   $('numero').textContent = Conductor.numero(ID);
 
   // --- Estado del viaje en pantalla ---
-  function enCurso() { return viaje.hora_inicio && !viaje.hora_llegada && viaje.estado !== 'CANCELADO'; }
+    function enCurso() {
+    return Boolean(
+      viaje.hora_inicio &&
+      !viaje.hora_llegada &&
+      ['EN CURSO', 'PENDIENTE'].includes(viaje.estado)
+    );
+   }
   function pintarEstado() {
     // El backend deja el viaje en PENDIENTE cuando detecta un desvío: si ya arrancó, eso significa "desviado".
     const desviado = viaje.hora_inicio && viaje.estado === 'PENDIENTE';
@@ -169,7 +175,16 @@
     $('transcurrido').textContent = min < 60 ? min + ' min' : Math.floor(min / 60) + ' h ' + (min % 60) + ' min';
   }, 1000);
 
-  if (!viaje.hora_llegada && viaje.estado !== 'CANCELADO') { if (SIMULAR) iniciarSimulacion(); else iniciarGPS(); }
+    if (
+    !viaje.hora_llegada &&
+    ['EN CURSO', 'PENDIENTE'].includes(viaje.estado)
+    ) {
+    if (SIMULAR) {
+      iniciarSimulacion();
+    } else {
+      iniciarGPS();
+    }
+  }
 })();
 </script>
 {% endblock %}

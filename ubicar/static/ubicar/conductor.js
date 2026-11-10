@@ -32,9 +32,14 @@ const Conductor = {
   },
 
   /* El viaje activo del conductor (iniciado y no finalizado), o null. */
-  async viajeActivo() {
+    async viajeActivo() {
     const viajes = await API.get('/api/viaje/');
-    return viajes.find(v => v.hora_inicio && !v.hora_llegada && v.estado !== 'CANCELADO') || null;
+
+    return viajes.find(v =>
+      v.hora_inicio &&
+      !v.hora_llegada &&
+      ['EN CURSO', 'PENDIENTE'].includes(v.estado)
+    ) || null;
   },
 
   numero(id) { return '#TRP-' + String(id).padStart(4, '0'); },

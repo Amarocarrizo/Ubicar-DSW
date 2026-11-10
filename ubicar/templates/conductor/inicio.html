@@ -36,7 +36,11 @@
   viajes.sort((a, b) => b.id_viaje - a.id_viaje); // más nuevos primero
 
   // Si hay un viaje activo, el botón grande lo retoma en vez de crear otro.
-  const activo = viajes.find(v => v.hora_inicio && !v.hora_llegada && v.estado !== 'CANCELADO');
+  const activo = viajes.find(v =>
+  v.hora_inicio &&
+  !v.hora_llegada &&
+  ['EN CURSO', 'PENDIENTE'].includes(v.estado)
+   );
   if (activo) {
     const boton = document.getElementById('boton-viaje');
     boton.href = '/conductor/viaje/' + activo.id_viaje + '/';

@@ -270,6 +270,13 @@ class Viaje(models.Model):
         return min_distancia # Retorna la distancia en metros al punto más cercano de la ruta
 
     def registrar_posicion(self, latitud, longitud):
+        if self.hora_llegada is not None or self.estado in (
+            EstadoViaje.FINALIZADO,
+            EstadoViaje.CANCELADO,
+        ):
+            raise ValueError(
+                'No se pueden registrar posiciones en un viaje cerrado'
+            )
         # 1- Guardar la posición actual en la base de datos
         posicion= Posicion.objects.create(
             id_viaje=self,
@@ -314,13 +321,20 @@ class Viaje(models.Model):
            self.estado = EstadoViaje.EN_CURSO
            self.save()
         return posicion
-
     def finalizar_viaje(self):
-        if self.estado!= EstadoViaje.EN_CURSO:
-           raise ValueError(
-            'Solo se puede finalizar un viaje que esté en curso'
+        if (
+            self.hora_inicio is None
+            or self.hora_llegada is not None
+            or self.estado not in (
+                EstadoViaje.EN_CURSO,
+                EstadoViaje.PENDIENTE,
             )
-        self.estado= EstadoViaje.FINALIZADO
+        ):
+            raise ValueError(
+                'Solo se puede finalizar un viaje que esté en curso'
+            )
+
+        self.estado = EstadoViaje.FINALIZADO
         self.hora_llegada = timezone.now()
         self.save()
     def verificar_perdida_conexion(self):
