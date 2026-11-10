@@ -10,6 +10,15 @@
 {% endblock %}
 
 {% block contenido %}
+<div class="estado-viaje alerta oculto" id="banner-irregular" style="flex-direction:column;align-items:flex-start;gap:4px;padding:14px 16px;font-size:14px;border:1.5px solid #ef4444">
+  <div style="display:flex;align-items:center;gap:6px">
+    <span>⛔</span> <span>Advertencia del administrador</span>
+  </div>
+  <div style="font-size:12px;font-weight:normal;opacity:0.95;padding-left:22px">
+    Se ha confirmado una irregularidad por desvío de ruta no autorizado. Regrese a la ruta asignada.
+  </div>
+</div>
+
 <div class="estado-viaje espera" id="banner"><span>Preparando el viaje…</span><span class="gps" id="gps"><span class="punto punto-gris"></span>GPS</span></div>
 
 <div class="tarjeta" style="padding:10px">
@@ -83,12 +92,29 @@
   }
   function gps(color, texto) { $('gps').innerHTML = `<span class="punto punto-${color}"></span>${texto}`; }
 
+  async function verificarAlertas() {
+    try {
+      const alertas = await API.get('/api/alerta/');
+      const tieneIrregularidad = alertas.some(a => 
+        Number(a.viaje) === Number(ID) && 
+        a.estado === 'IRREGULARIDAD_CONFIRMADA'
+      );
+      const bannerIrreg = $('banner-irregular');
+      if (bannerIrreg) {
+        bannerIrreg.classList.toggle('oculto', !tieneIrregularidad);
+      }
+    } catch (e) {
+      // Silencioso para no interferir con el GPS
+    }
+  }
+
   async function cargarViaje() {
     viaje = await API.get('/api/viaje/' + ID + '/');
     $('ruta-texto').textContent = viaje.ruta.origen + ' → ' + viaje.ruta.destino;
     $('vehiculo-texto').textContent = (viaje.vehiculo ? viaje.vehiculo.modelo + ' · ' + viaje.vehiculo.patente : '') + ' · ' + F.fecha(viaje.hora_inicio || new Date().toISOString());
     $('distancia').textContent = F.km(viaje.ruta.distancia_estimada);
     pintarEstado();
+    await verificarAlertas();
   }
 
   // --- Mapa ---
@@ -174,6 +200,11 @@
     const min = Math.max(0, Math.round((fin - new Date(viaje.hora_inicio)) / 60000));
     $('transcurrido').textContent = F.duracion(min);
   }, 1000);
+
+  // Consulta periódica de alertas del viaje cada 5 segundos
+  setInterval(() => {
+    if (enCurso()) verificarAlertas();
+  }, 5000);
 
     if (
     !viaje.hora_llegada &&

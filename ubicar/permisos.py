@@ -15,12 +15,12 @@ class EsConductor(BasePermission):
 class EsAdministrador(BasePermission):
 
     def has_permission(self, request, view):
-        return bool(
-            request.user
-            and request.user.is_authenticated
-            and (
-                hasattr(request.user, 'administrador')
-                or request.user.is_staff
-                or request.user.is_superuser
-            )
-        )
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if request.user.is_staff or request.user.is_superuser:
+            return True
+        try:
+            return hasattr(request.user, 'administrador') and bool(request.user.administrador)
+        except Exception:
+            from ubicar.models import Administrador
+            return Administrador.objects.filter(usuario=request.user).exists()

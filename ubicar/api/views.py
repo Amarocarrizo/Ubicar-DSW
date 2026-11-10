@@ -31,8 +31,13 @@ from ubicar.permisos import EsConductor, EsAdministrador
 
 def obtener_o_crear_administrador(user):
     """Devuelve la entidad Administrador del usuario o la crea automáticamente si es staff/superuser."""
-    if hasattr(user, 'administrador') and user.administrador:
-        return user.administrador
+    try:
+        admin = getattr(user, 'administrador', None)
+        if admin:
+            return admin
+    except Exception:
+        pass
+
     admin = Administrador.objects.filter(usuario=user).first()
     if admin:
         return admin
