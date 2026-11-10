@@ -64,10 +64,13 @@ const API = {
   post(url, body) { return this.pedir('POST', url, body || {}); },
 
   /* Quién soy. Se guarda en sessionStorage para no pedirlo en cada pantalla. */
-  async me() {
-    const guardado = sessionStorage.getItem('me');
-    if (guardado) return JSON.parse(guardado);
-    const me = await this.get('/api/me/');
+  async me(rolEsperado) {
+    const url = rolEsperado ? `/api/me/?rol=${rolEsperado}` : '/api/me/';
+    if (!rolEsperado) {
+      const guardado = sessionStorage.getItem('me');
+      if (guardado) return JSON.parse(guardado);
+    }
+    const me = await this.get(url);
     sessionStorage.setItem('me', JSON.stringify(me));
     return me;
   },
@@ -75,7 +78,11 @@ const API = {
   /* Protege una pantalla: sin token va al login; con otro rol va a su propia pantalla. */
   async requerir(rol) {
     if (!this.token()) { location.href = '/login/'; return null; }
-    const me = await this.me();
+    let me = await this.me();
+    // Si el usuario tiene ambos perfiles (ej. admin y chofer), adaptamos al rol requerido
+    if (me.rol !== rol && ((rol === 'conductor' && me.conductor) || (rol === 'admin' && me.administrador))) {
+      me = await this.me(rol);
+    }
     if (me.rol !== rol) { location.href = me.rol === 'admin' ? '/panel/' : '/conductor/'; return null; }
     return me;
   },

@@ -409,29 +409,47 @@ class AlertaViewsSet(viewsets.ModelViewSet):
         })
 
 class MeView(APIView):
-    """Datos del usuario, vehículo actual e historial de vehículos."""
-    """GET /api/me/ -> quién está logueado, su rol y sus datos.
+    """Datos del usuario, vehículo actual e historial de vehículos.
     
-        El front lo llama después del login para saber qué pantalla mostrar
-        (conductor o administrador) y con qué id de administrador aprobar/rechazar.
-        """
+    GET /api/me/ -> quién está logueado, su rol y sus datos.
+    El front lo llama después del login para saber qué pantalla mostrar
+    (conductor o administrador) y con qué id de administrador aprobar/rechazar.
+    """
 
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
         conductor = getattr(user, 'conductor', None)
-        administrador = getattr(user, 'administrador', None)
+        try:
+            administrador = getattr(user, 'administrador', None)
+        except Exception:
+            administrador = None
 
         if not administrador and (user.is_staff or user.is_superuser):
             administrador = obtener_o_crear_administrador(user)
 
-        if administrador or user.is_staff or user.is_superuser:
-            rol = 'admin'
-        elif conductor:
-            rol = 'conductor'
+        # Si el usuario tiene ambos perfiles (ej. cuenta de prueba / superuser asignado como chofer),
+        # permitimos distinguir por el query param ?preferencia=conductor o por el contexto
+        preferencia = request.query_params.get('rol')
+        if preferencia in ['conductor', 'admin']:
+            if preferencia == 'conductor' and conductor:
+                rol = 'conductor'
+            elif preferencia == 'admin' and (administrador or user.is_staff or user.is_superuser):
+                rol = 'admin'
+            else:
+                rol = 'admin' if (administrador or user.is_staff or user.is_superuser) else ('conductor' if conductor else 'sin_rol')
         else:
-            rol = 'sin_rol'
+            # Por defecto: si tiene conductor pero NO es staff ni superuser, es conductor
+            # Si tiene conductor Y es staff/admin, si no pidió admin explícito lo dejamos como conductor si sólo tiene rol de chofer
+            if conductor and not (user.is_staff or user.is_superuser):
+                rol = 'conductor'
+            elif administrador or user.is_staff or user.is_superuser:
+                rol = 'admin'
+            elif conductor:
+                rol = 'conductor'
+            else:
+                rol = 'sin_rol'
 
         vehiculo = None
         mis_vehiculos = []
