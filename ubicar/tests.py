@@ -125,29 +125,29 @@ class UbicarTests(TestCase):
         # =========================
         # ESTADOS DE GASTO
         # =========================
-        self.estado_pendiente = estadoGasto.objects.create(
+        self.estado_pendiente, _ = estadoGasto.objects.get_or_create(
             estado='PENDIENTE',
-            descripcion='Pendiente'
+            defaults={'descripcion': 'Pendiente'}
         )
 
-        self.estado_validado = estadoGasto.objects.create(
+        self.estado_validado, _ = estadoGasto.objects.get_or_create(
             estado='VALIDADO',
-            descripcion='Validado'
+            defaults={'descripcion': 'Validado'}
         )
 
-        self.estado_revisar = estadoGasto.objects.create(
+        self.estado_revisar, _ = estadoGasto.objects.get_or_create(
             estado='A_REVISAR',
-            descripcion='A revisar'
+            defaults={'descripcion': 'A revisar'}
         )
 
-        self.estado_aceptado = estadoGasto.objects.create(
+        self.estado_aceptado, _ = estadoGasto.objects.get_or_create(
             estado='ACEPTADO',
-            descripcion='Aceptado'
+            defaults={'descripcion': 'Aceptado'}
         )
 
-        self.estado_rechazado = estadoGasto.objects.create(
+        self.estado_rechazado, _ = estadoGasto.objects.get_or_create(
             estado='RECHAZADO',
-            descripcion='Rechazado'
+            defaults={'descripcion': 'Rechazado'}
         )
 
         # =========================
