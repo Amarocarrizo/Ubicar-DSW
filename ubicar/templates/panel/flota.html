@@ -35,10 +35,16 @@
 
     // 2) Viajes activos, alertas pendientes y todas las posiciones (se agrupan por viaje acá).
     const [viajes, alertas, posiciones] = await Promise.all([API.get('/api/viaje/'), API.get('/api/alerta/'), API.get('/api/posicion/')]);
-    const activos = viajes.filter(v => v.hora_inicio && !v.hora_llegada && v.estado !== 'CANCELADO');
-    const pendientes = alertas.filter(a => a.estado === 'PENDIENTE');
+    const activos = (viajes || []).filter(v => v.hora_inicio && !v.hora_llegada && v.estado !== 'CANCELADO');
+    const pendientes = (alertas || []).filter(a => a.estado === 'PENDIENTE');
     const porViaje = {};
-    posiciones.sort((a, b) => a.hora.localeCompare(b.hora)).forEach(p => (porViaje[p.id_viaje] = porViaje[p.id_viaje] || []).push({ lat: +p.posicion_x, lon: +p.posicion_y, hora: p.hora }));
+    (posiciones || []).sort((a, b) => (a.hora || '').localeCompare(b.hora || '')).forEach(p => {
+      const vid = p.id_viaje != null ? (p.id_viaje.id_viaje || p.id_viaje) : null;
+      if (vid != null) {
+        porViaje[vid] = porViaje[vid] || [];
+        porViaje[vid].push({ lat: +p.posicion_x, lon: +p.posicion_y, hora: p.hora });
+      }
+    });
 
     // 3) Resumen de arriba.
     const desviado = v => v.estado === 'PENDIENTE'; // ya iniciado y PENDIENTE = desviado (ver viaje.html)
@@ -51,22 +57,35 @@
     capas.forEach(c => mapa.removeLayer(c)); capas = [];
     $('lista').innerHTML = activos.length ? '' : '<div class="ayuda" style="padding:20px">No hay vehículos en ruta en este momento.</div>';
     activos.forEach(v => {
-      const recorrido = porViaje[v.id_viaje] || [], ultima = recorrido[recorrido.length - 1];
+      const idV = v.id_viaje;
+      const recorrido = porViaje[idV] || [], ultima = recorrido[recorrido.length - 1];
       const color = desviado(v) ? '#dc2626' : '#16a34a';
-      const conAlerta = pendientes.some(a => a.viaje === v.id_viaje);
-      if (v.ruta.geometria_ruta) capas.push(Mapa.dibujarRuta(mapa, v.ruta.geometria_ruta, '#94a3b8', true));
+      const conAlerta = pendientes.some(a => Number(a.viaje) === Number(idV));
+      const vehiculoInfo = v.vehiculo || (Panel.viajes[idV] && Panel.viajes[idV].vehiculo) || {};
+      const patente = vehiculoInfo.patente || 'Vehículo';
+      const modelo = vehiculoInfo.modelo || '';
+      const rutaInfo = v.ruta || (Panel.viajes[idV] && Panel.viajes[idV].ruta) || {};
+      const textoRuta = (rutaInfo.origen && rutaInfo.destino)
+        ? `${rutaInfo.origen} → ${rutaInfo.destino}`
+        : Panel.ruta(idV);
+      const textoDestino = rutaInfo.destino ? `Hacia: <b>${F.texto(rutaInfo.destino)}</b>` : textoRuta;
+
+      if (rutaInfo && rutaInfo.geometria_ruta) {
+        capas.push(Mapa.dibujarRuta(mapa, rutaInfo.geometria_ruta, '#94a3b8', true));
+      }
       if (recorrido.length) capas.push(Mapa.dibujarRecorrido(mapa, recorrido, color));
       let camion = null;
       if (ultima) {
         camion = Mapa.marcador(mapa, ultima.lat, ultima.lon, color, '🚚')
-          .bindPopup(`<b>${F.texto(v.vehiculo.patente)}</b> · ${F.texto(Panel.conductor(v.id_viaje))}<br>${Panel.ruta(v.id_viaje)}<br>Última posición ${F.hora(ultima.hora)}`);
+          .bindPopup(`<b>${F.texto(patente)}</b> · ${F.texto(Panel.conductor(idV))}<br><b>Ruta:</b> ${F.texto(textoRuta)}<br>Última posición ${F.hora(ultima.hora)}`);
         capas.push(camion);
       }
       // 5) Lista lateral: al hacer clic centra el mapa en ese vehículo.
       const item = document.createElement('div'); item.className = 'vehiculo-item';
-      item.innerHTML = `<b><span class="punto" style="background:${color}"></span>${F.texto(v.vehiculo.patente + ' · ' + v.vehiculo.modelo)} ${conAlerta ? '<span class="chip chip-rojo">⚠ alerta</span>' : ''}</b>
-        <div class="sub">${F.texto(Panel.conductor(v.id_viaje))} · ${Panel.ruta(v.id_viaje)}</div>
-        <div class="sub">${desviado(v) ? 'Desviado' : 'En ruta'} · ${ultima ? 'última posición ' + F.hora(ultima.hora) : 'sin posiciones'} · ${Panel.numero(v.id_viaje)}</div>`;
+      item.innerHTML = `<b><span class="punto" style="background:${color}"></span>${F.texto(patente + (modelo ? ' · ' + modelo : ''))} ${conAlerta ? '<span class="chip chip-rojo">⚠ alerta</span>' : ''}</b>
+        <div class="sub">${F.texto(Panel.conductor(idV))}</div>
+        <div class="sub" style="color:var(--texto);margin-top:2px">🚩 ${textoDestino}</div>
+        <div class="sub" style="margin-top:2px">${desviado(v) ? 'Desviado' : 'En ruta'} · ${ultima ? 'última pos ' + F.hora(ultima.hora) : 'sin posiciones'} · ${Panel.numero(idV)}</div>`;
       item.onclick = () => { if (camion) { mapa.setView(camion.getLatLng(), 13); camion.openPopup(); } };
       $('lista').appendChild(item);
     });
