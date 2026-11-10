@@ -32,11 +32,12 @@ class Command(BaseCommand):
         for razon in ['COMBUSTIBLE', 'PEAJE', 'OTROS']:
             tipoDeGasto.objects.get_or_create(razon_del_gasto=razon)
 
-        # 2. Administrador (usuario de Django con is_staff + fila en Administrador con el mismo mail)
+        # 2. Administrador (usuario de Django con is_staff + su fila en Administrador, ligada por 'usuario')
         admin_user = self._usuario('admin', 'admin1234', 'Sofía', 'Ortega', 'admin@ubicar.com', staff=True)
         Administrador.objects.get_or_create(
-            mail=admin_user.email,
-            defaults={'nombre': 'Sofía', 'apellido': 'Ortega', 'telefono': '1155550000', 'dni': 30111222})
+            usuario=admin_user,
+            defaults={'nombre': 'Sofía', 'apellido': 'Ortega', 'mail': admin_user.email,
+                      'telefono': '1155550000', 'dni': 30111222})
 
         # 3. Conductor con vehículo asignado (sin asignación vigente no puede crear viajes)
         cond_user = self._usuario('carlos', 'carlos1234', 'Carlos', 'Mendoza', 'carlos@ubicar.com')

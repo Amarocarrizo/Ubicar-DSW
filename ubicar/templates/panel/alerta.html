@@ -70,7 +70,7 @@
   // Decisión del administrador: confirmar irregularidad o revisar sin novedad.
   async function decidir(accion, mensaje) {
     try {
-      await API.post(`/api/alerta/${ID}/${accion}/`, { administrador: me.administrador.id_admin });
+      await API.post(`/api/alerta/${ID}/${accion}/`); // el backend toma el admin del usuario logueado
       alerta = await API.get('/api/alerta/' + ID + '/');
       pintarEstado(); aviso(mensaje);
     } catch (e) { aviso(e.message, true); }

@@ -155,8 +155,9 @@
   puntosRuta = Mapa.puntos(viaje.ruta.geometria_ruta);
   if (puntosRuta.length) Mapa.encuadrar(mapa, [Mapa.dibujarRuta(mapa, viaje.ruta.geometria_ruta)]);
 
-  // posiciones ya guardadas (si se vuelve a abrir la pantalla)
-  const previas = (await API.get('/api/posicion/')).filter(p => p.id_viaje === ID).sort((a, b) => a.hora.localeCompare(b.hora));
+  // posiciones ya guardadas (si se vuelve a abrir la pantalla). /api/posicion/ es solo para el admin:
+  // si el backend lo rechaza, la pantalla arranca sin el recorrido previo y lo dibuja desde la próxima posición.
+  const previas = (await API.get('/api/posicion/').catch(() => [])).filter(p => p.id_viaje === ID).sort((a, b) => a.hora.localeCompare(b.hora));
   previas.forEach(p => pintarPosicion({ lat: +p.posicion_x, lon: +p.posicion_y }));
   enviadas = previas.length; $('cantidad').textContent = enviadas;
   if (previas.length) $('ultima').textContent = F.hora(previas[previas.length - 1].hora);

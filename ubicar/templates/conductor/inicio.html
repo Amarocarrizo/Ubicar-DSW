@@ -35,6 +35,7 @@
 
   // Un solo pedido por recurso; el resto se calcula acá.
   const [viajes, gastos] = await Promise.all([API.get('/api/viaje/'), API.get('/api/gasto/')]);
+  viajes.sort((a, b) => b.id_viaje - a.id_viaje); // más nuevos primero
 
   // Si hay un viaje activo, el botón grande lo retoma en vez de crear otro.
   const activo = viajes.find(v => v.hora_inicio && !v.hora_llegada && v.estado !== 'CANCELADO');

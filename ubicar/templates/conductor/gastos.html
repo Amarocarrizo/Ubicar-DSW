@@ -14,6 +14,7 @@
                     ACEPTADO: ['Aprobado', 'verde'], RECHAZADO: ['Rechazado', 'rojo'] };
   const NOMBRES = { COMBUSTIBLE: 'Combustible', PEAJE: 'Peaje', OTROS: 'Otros' };
   const [gastos, tipos] = await Promise.all([API.get('/api/gasto/'), API.get('/api/tipos-gasto/')]);
+  gastos.sort((a, b) => b.fecha_hora.localeCompare(a.fecha_hora));
   const nombreTipo = id => { const t = tipos.find(t => t.idTipoDeGasto === id); return t ? NOMBRES[t.razon_del_gasto] || t.razon_del_gasto : '—'; };
   const lista = document.getElementById('lista');
   if (!gastos.length) { lista.innerHTML = '<span class="ayuda">Todavía no cargaste gastos.</span>'; return; }

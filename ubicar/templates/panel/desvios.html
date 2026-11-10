@@ -70,7 +70,7 @@
     $('filas').querySelectorAll('button[data-id]').forEach(b => b.onclick = async () => {
       if (!confirm('¿Marcar la alerta como irregularidad confirmada?')) return;
       try {
-        await API.post(`/api/alerta/${b.dataset.id}/confirmar/`, { administrador: me.administrador.id_admin });
+        await API.post(`/api/alerta/${b.dataset.id}/confirmar/`);
         aviso('Irregularidad confirmada');
         alertas = await API.get('/api/alerta/'); kpis(); tabla();
       } catch (e) { aviso(e.message, true); }

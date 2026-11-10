@@ -17,6 +17,13 @@ class Administrador(models.Model):
         verbose_name_plural = 'administradores'
 
     id_admin=models.AutoField(primary_key=True)
+    usuario = models.OneToOneField(
+    User,
+    on_delete=models.CASCADE,
+    related_name='administrador',
+    null=True,
+    blank=True
+    )
     nombre=models.CharField(max_length=30)
     apellido=models.CharField(max_length=30)
     mail=models.CharField(max_length=254)
@@ -283,15 +290,25 @@ class Viaje(models.Model):
         distancia_al_camino = self._calcular_distancia_a_ruta(latitud, longitud)
 
         if distancia_al_camino > UMBRAL_DESVIO_METROS:
-            # Buscar el tipo de alerta 'DESVIO'
+
+    # Verificar si ya existe una alerta de desvío pendiente
+          alerta_desvio_existente = Alerta.objects.filter(
+           viaje=self,
+           tipo=AlertaDefinida.DESVIO,
+           estado=EstadoAlerta.PENDIENTE
+          ).exists()
+
+    # Solo crear una nueva si todavía no existe
+          if not alerta_desvio_existente:
             Alerta.objects.create(
             tipo=AlertaDefinida.DESVIO,
             descripcion=f"El vehículo se desvió {round(distancia_al_camino, 2)} metros de la ruta planificada.",
-            estado='PENDIENTE',
+            estado=EstadoAlerta.PENDIENTE,
             viaje=self
            )
-            self.estado = EstadoViaje.PENDIENTE
-            self.save()
+
+          self.estado = EstadoViaje.PENDIENTE
+          self.save()
         else:
            self.estado = EstadoViaje.EN_CURSO
            self.save()

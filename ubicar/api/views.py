@@ -27,38 +27,62 @@ from ubicar.api.serializer import GastoSerializer
 from ubicar.api.serializer import AlertaSerializer
 from ubicar.api.serializer import AsignacionVehiculoSerializer
 from ubicar.api.serializer import TipoDeGastoSerializer
+from ubicar.permisos import EsConductor, EsAdministrador
 
 class VehiculoViewsSet(viewsets.ModelViewSet):
     queryset= Vehiculo.objects.all()
     serializer_class=VehiculoSerializer
+    permission_classes = [EsAdministrador]
 
 class AdministradorViewsSet(viewsets.ModelViewSet):
     queryset=Administrador.objects.all()
     serializer_class=AdministradorSerializer
+    permission_classes = [EsAdministrador]
 
 class AsignacionVehiculoViewSet(viewsets.ModelViewSet):
     queryset = AsignacionVehiculo.objects.all()
     serializer_class = AsignacionVehiculoSerializer
+    permission_classes = [EsAdministrador]
 
 class ConductorViewsSet(viewsets.ModelViewSet):
     queryset= Conductor.objects.all()
     serializer_class= ConductorSerializer
+    permission_classes = [EsAdministrador]
 
 class RutaViewsSet(viewsets.ModelViewSet):
     queryset= Ruta.objects.all()
     serializer_class= RutaSerializer
+    permission_classes=[IsAuthenticated]
 class ViajeViewsSet(viewsets.ModelViewSet):
     queryset = Viaje.objects.all()
     serializer_class = ViajeSerializer
-    permission_classes = [IsAuthenticated]
-
     def get_queryset(self):
-        # Un conductor solo ve sus propios viajes (los más nuevos primero); el admin ve todos.
-        viajes = Viaje.objects.all().order_by('-id_viaje')
-        conductor = Conductor.objects.filter(usuario=self.request.user).first()
-        if conductor and not self.request.user.is_staff:
-            viajes = viajes.filter(id_conductor=conductor)
-        return viajes
+
+     usuario = self.request.user
+
+     # Admin ve todos los viajes
+     if hasattr(usuario, 'administrador'):
+        return Viaje.objects.all()
+
+     # Conductor ve solamente sus viajes
+     if hasattr(usuario, 'conductor'):
+        return Viaje.objects.filter(
+            id_conductor=usuario.conductor
+        )
+
+     return Viaje.objects.none()
+    def get_permissions(self):
+
+     if self.action in ['create', 'iniciar', 'posicion', 'finalizar']:
+        permission_classes = [EsConductor]
+
+     elif self.action == 'verificar_conexiones':
+        permission_classes = [EsAdministrador]
+
+     else:
+        permission_classes = [IsAuthenticated]
+
+     return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
         conductor = self.request.user.conductor
@@ -176,14 +200,41 @@ class ViajeViewsSet(viewsets.ModelViewSet):
         'viajes_sin_conexion': viajes_sin_conexion
     })
     
-class PosicionViewsSet(viewsets.ModelViewSet):
+class PosicionViewsSet(viewsets.ReadOnlyModelViewSet):
     queryset= Posicion.objects.all()
     serializer_class= PosicionSerializer
+    permission_classes = [EsAdministrador]
 
 class GastoViewsSet(viewsets.ModelViewSet):
     queryset = Gasto.objects.all()
     serializer_class = GastoSerializer
-    permission_classes = [IsAuthenticated]
+    def get_queryset(self):
+
+     usuario = self.request.user
+
+     # Admin ve todos los gastos
+     if hasattr(usuario, 'administrador'):
+        return Gasto.objects.all()
+
+     # Conductor ve solamente gastos de sus viajes
+     if hasattr(usuario, 'conductor'):
+        return Gasto.objects.filter(
+            viaje__id_conductor=usuario.conductor
+        )
+
+     return Gasto.objects.none()
+    def get_permissions(self):
+
+        if self.action == 'create':
+            permission_classes = [EsConductor]
+
+        elif self.action in ['aprobar', 'rechazar']:
+            permission_classes = [EsAdministrador]
+
+        else:
+            permission_classes = [IsAuthenticated]
+
+        return [permission() for permission in permission_classes]
 
     def perform_create(self, serializer):
 
@@ -237,11 +288,7 @@ class GastoViewsSet(viewsets.ModelViewSet):
 
      gasto = self.get_object()
 
-     administrador_id = request.data.get('administrador')
-
-     administrador = Administrador.objects.get(
-        id_admin=administrador_id
-     )
+     administrador = request.user.administrador
 
      gasto.aprobar(administrador)
 
@@ -255,11 +302,7 @@ class GastoViewsSet(viewsets.ModelViewSet):
 
      gasto = self.get_object()
 
-     administrador_id = request.data.get('administrador')
-
-     administrador = Administrador.objects.get(
-        id_admin=administrador_id
-     )
+     administrador = request.user.administrador
 
      gasto.rechazar(administrador)
 
@@ -275,16 +318,34 @@ class TipoDeGastoViewSet(viewsets.ReadOnlyModelViewSet):
 class AlertaViewsSet(viewsets.ModelViewSet):
     queryset= Alerta.objects.all()
     serializer_class= AlertaSerializer
+    def get_queryset(self):
+
+     usuario = self.request.user
+
+     if hasattr(usuario, 'administrador'):
+        return Alerta.objects.all()
+
+     if hasattr(usuario, 'conductor'):
+        return Alerta.objects.filter(
+            viaje__id_conductor=usuario.conductor
+        )
+
+     return Alerta.objects.none()
+    def get_permissions(self):
+
+     if self.action in ['confirmar', 'sin_novedad']:
+        permission_classes = [EsAdministrador]
+
+     else:
+        permission_classes = [IsAuthenticated]
+
+     return [permission() for permission in permission_classes]
     @action(detail=True, methods=['post'])
     def confirmar(self, request, pk=None):
 
      alerta = self.get_object()
 
-     administrador_id = request.data.get('administrador')
-
-     administrador = Administrador.objects.get(
-        id_admin=administrador_id
-     )
+     administrador= request.user.administrador
 
      alerta.confirmar_irregularidad(administrador)
 
@@ -296,11 +357,7 @@ class AlertaViewsSet(viewsets.ModelViewSet):
 
      alerta = self.get_object()
 
-     administrador_id = request.data.get('administrador')
-
-     administrador = Administrador.objects.get(
-        id_admin=administrador_id
-     )
+     administrador = request.user.administrador
 
      alerta.revisar_sin_novedad(administrador)
 
@@ -320,9 +377,8 @@ class MeView(APIView):
 
     def get(self, request):
         user = request.user
-        conductor = Conductor.objects.filter(usuario=user).first()
-        # Administrador no está ligado a User: se lo reconoce por el mail.
-        administrador = Administrador.objects.filter(mail=user.email).first()
+        conductor = getattr(user, 'conductor', None)
+        administrador = getattr(user, 'administrador', None)
 
         if administrador or user.is_staff:
             rol = 'admin'

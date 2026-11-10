@@ -10,7 +10,7 @@
 <script>
 (async () => {
   if (!await Conductor.iniciar()) return;
-  const viajes = await API.get('/api/viaje/');
+  const viajes = (await API.get('/api/viaje/')).sort((a, b) => b.id_viaje - a.id_viaje);
   const lista = document.getElementById('lista');
   if (!viajes.length) { lista.innerHTML = '<span class="ayuda">Todavía no tenés viajes.</span>'; return; }
   lista.innerHTML = viajes.map(v => {

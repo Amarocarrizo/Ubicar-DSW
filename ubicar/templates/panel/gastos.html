@@ -34,7 +34,7 @@
   const me = await Panel.iniciar();
   if (!me) return;
   const $ = id => document.getElementById(id);
-  let gastos = await API.get('/api/gasto/');
+  let gastos = (await API.get('/api/gasto/')).sort((a, b) => b.fecha_hora.localeCompare(a.fecha_hora));
   const PENDIENTES = ['PENDIENTE', 'VALIDADO', 'A_REVISAR']; // todavía sin decisión del administrador
 
   // Tarjetas de arriba: suma de importes por estado.
@@ -77,7 +77,7 @@
     $('filas').querySelectorAll('button[data-accion]').forEach(b => b.onclick = async () => {
       b.disabled = true;
       try {
-        await API.post(`/api/gasto/${b.dataset.id}/${b.dataset.accion}/`, { administrador: me.administrador.id_admin });
+        await API.post(`/api/gasto/${b.dataset.id}/${b.dataset.accion}/`); // el backend toma el admin del usuario logueado
         aviso(b.dataset.accion === 'aprobar' ? 'Gasto aprobado' : 'Gasto rechazado');
         gastos = await API.get('/api/gasto/'); kpis(); tabla();
       } catch (e) { aviso(e.message, true); b.disabled = false; }
