@@ -1,0 +1,80 @@
+{% extends "panel/base_panel.html" %}
+{% block titulo %}Flota en vivo · UBICAR{% endblock %}
+
+{% block contenido %}
+<div class="p-titulo" style="display:flex;justify-content:space-between;align-items:flex-start">
+  <div><h1>Flota en vivo</h1><div class="sub">Ubicación y estado de los vehículos con viaje en curso · se actualiza cada 10 segundos</div></div>
+  <div style="display:flex;gap:8px">
+    <span class="chip chip-verde" id="k-ruta">0 en ruta</span>
+    <span class="chip chip-rojo" id="k-desviados">0 desviados</span>
+    <span class="chip chip-naranja" id="k-alertas">0 alertas pendientes</span>
+  </div>
+</div>
+
+<div class="flota">
+  <div class="tabla-caja" style="padding:10px"><div class="mapa" id="mapa"></div></div>
+  <div class="tabla-caja">
+    <div class="tabla-cabecera"><h2>Vehículos activos <span class="contador" id="contador">0</span></h2></div>
+    <div id="lista"><div class="ayuda" style="padding:20px">Cargando…</div></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block script_pantalla %}
+<script>
+(async () => {
+  const me = await Panel.iniciar();
+  if (!me) return;
+  const $ = id => document.getElementById(id);
+  const mapa = Mapa.crear('mapa', 11);
+  let capas = [], primeraVez = true;
+
+  async function refrescar() {
+    // 1) El backend revisa qué viajes dejaron de mandar posición y genera las alertas de pérdida de conexión.
+    await API.post('/api/viaje/verificar_conexiones/').catch(() => {});
+
+    // 2) Viajes activos, alertas pendientes y todas las posiciones (se agrupan por viaje acá).
+    const [viajes, alertas, posiciones] = await Promise.all([API.get('/api/viaje/'), API.get('/api/alerta/'), API.get('/api/posicion/')]);
+    const activos = viajes.filter(v => v.hora_inicio && !v.hora_llegada && v.estado !== 'CANCELADO');
+    const pendientes = alertas.filter(a => a.estado === 'PENDIENTE');
+    const porViaje = {};
+    posiciones.sort((a, b) => a.hora.localeCompare(b.hora)).forEach(p => (porViaje[p.id_viaje] = porViaje[p.id_viaje] || []).push({ lat: +p.posicion_x, lon: +p.posicion_y, hora: p.hora }));
+
+    // 3) Resumen de arriba.
+    const desviado = v => v.estado === 'PENDIENTE'; // ya iniciado y PENDIENTE = desviado (ver viaje.html)
+    $('k-ruta').textContent = activos.filter(v => !desviado(v)).length + ' en ruta';
+    $('k-desviados').textContent = activos.filter(desviado).length + ' desviados';
+    $('k-alertas').textContent = pendientes.length + ' alertas pendientes';
+    $('contador').textContent = activos.length;
+
+    // 4) Mapa: se borran las capas anteriores y se dibuja cada viaje activo (ruta punteada, recorrido y camión).
+    capas.forEach(c => mapa.removeLayer(c)); capas = [];
+    $('lista').innerHTML = activos.length ? '' : '<div class="ayuda" style="padding:20px">No hay vehículos en ruta en este momento.</div>';
+    activos.forEach(v => {
+      const recorrido = porViaje[v.id_viaje] || [], ultima = recorrido[recorrido.length - 1];
+      const color = desviado(v) ? '#dc2626' : '#16a34a';
+      const conAlerta = pendientes.some(a => a.viaje === v.id_viaje);
+      if (v.ruta.geometria_ruta) capas.push(Mapa.dibujarRuta(mapa, v.ruta.geometria_ruta, '#94a3b8', true));
+      if (recorrido.length) capas.push(Mapa.dibujarRecorrido(mapa, recorrido, color));
+      let camion = null;
+      if (ultima) {
+        camion = Mapa.marcador(mapa, ultima.lat, ultima.lon, color, '🚚')
+          .bindPopup(`<b>${F.texto(v.vehiculo.patente)}</b> · ${F.texto(Panel.conductor(v.id_viaje))}<br>${Panel.ruta(v.id_viaje)}<br>Última posición ${F.hora(ultima.hora)}`);
+        capas.push(camion);
+      }
+      // 5) Lista lateral: al hacer clic centra el mapa en ese vehículo.
+      const item = document.createElement('div'); item.className = 'vehiculo-item';
+      item.innerHTML = `<b><span class="punto" style="background:${color}"></span>${F.texto(v.vehiculo.patente + ' · ' + v.vehiculo.modelo)} ${conAlerta ? '<span class="chip chip-rojo">⚠ alerta</span>' : ''}</b>
+        <div class="sub">${F.texto(Panel.conductor(v.id_viaje))} · ${Panel.ruta(v.id_viaje)}</div>
+        <div class="sub">${desviado(v) ? 'Desviado' : 'En ruta'} · ${ultima ? 'última posición ' + F.hora(ultima.hora) : 'sin posiciones'} · ${Panel.numero(v.id_viaje)}</div>`;
+      item.onclick = () => { if (camion) { mapa.setView(camion.getLatLng(), 13); camion.openPopup(); } };
+      $('lista').appendChild(item);
+    });
+    if (primeraVez && capas.length) { Mapa.encuadrar(mapa, capas); primeraVez = false; }
+  }
+
+  await refrescar();
+  setInterval(refrescar, 10000);
+})();
+</script>
+{% endblock %}

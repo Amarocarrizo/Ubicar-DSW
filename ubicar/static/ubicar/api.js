@@ -12,12 +12,14 @@ const API = {
     });
     if (!r.ok) throw new Error('Usuario o contraseña incorrectos');
     const data = await r.json();
+    sessionStorage.removeItem('me'); // olvida al usuario anterior (si cambió de cuenta)
     localStorage.setItem('access', data.access);
     localStorage.setItem('refresh', data.refresh);
   },
 
   logout() {
     localStorage.clear();
+    sessionStorage.clear();
     location.href = '/login/';
   },
 

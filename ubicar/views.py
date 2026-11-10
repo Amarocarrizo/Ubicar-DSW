@@ -43,7 +43,7 @@ def conductor_perfil(request):
 
 # --- Panel del administrador (web) ---
 def panel_inicio(request):
-    return redirect('/panel/gastos/')
+    return render(request, 'panel/flota.html')
 
 
 def panel_gastos(request):
@@ -52,6 +52,10 @@ def panel_gastos(request):
 
 def panel_desvios(request):
     return render(request, 'panel/desvios.html')
+
+
+def panel_administracion(request):
+    return render(request, 'panel/administracion.html')
 
 
 def panel_alerta(request, id_alerta):

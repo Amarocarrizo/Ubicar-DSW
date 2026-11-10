@@ -62,7 +62,7 @@
       return `<tr>
         <td class="nombre"><span class="punto punto-${color}"></span>${F.texto(Panel.conductor(g.viaje))}</td>
         <td>${Panel.vehiculo(g.viaje)}</td>
-        <td>${Panel.TIPO_GASTO[g.tipo_nombre] || ''}<span class="sub">${Number(g.km_registrado).toLocaleString('es-AR')} km · <a href="${g.comprobante}" target="_blank" style="color:var(--azul)">ver comprobante</a></span></td>
+        <td>${Panel.TIPO_GASTO[g.tipo_nombre] || ''}${g.descripcion ? ' · ' + F.texto(g.descripcion) : ''}<span class="sub">${Number(g.km_registrado).toLocaleString('es-AR')} km · <a href="${g.comprobante}" target="_blank" style="color:var(--azul)">ver comprobante</a></span></td>
         <td>${F.fecha(g.fecha_hora)}<span class="sub">${F.hora(g.fecha_hora)} · ${Panel.numero(g.viaje)}</span></td>
         <td class="plata">${F.plata(g.monto)}</td>
         <td><div class="acciones">${pendiente

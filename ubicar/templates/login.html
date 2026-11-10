@@ -51,7 +51,8 @@ document.getElementById('form').addEventListener('submit', async (e) => {
   }
 });
 
-// Si ya había una sesión guardada, no hace falta volver a loguearse.
-if (API.token()) API.me().then(irAInicio).catch(() => localStorage.clear());
+// Si se entra al login con una sesión abierta, se la cierra para poder entrar con otro usuario.
+localStorage.clear();
+sessionStorage.clear();
 </script>
 {% endblock %}

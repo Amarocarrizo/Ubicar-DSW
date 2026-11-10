@@ -9,7 +9,7 @@
       <a href="/panel/">Flota en vivo</a>
       <a href="/panel/gastos/">Auditoría de Gastos</a>
       <a href="/panel/desvios/">Auditoría de Desvíos</a>
-      <a href="/admin/" target="_blank">Administración</a>
+      <a href="/panel/administracion/">Administración</a>
     </nav>
     <div class="usuario"><b>Panel Administrador</b><span data-nombre></span></div>
     <div class="inicial" data-inicial></div>
@@ -22,7 +22,7 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{% static 'ubicar/mapa.js' %}"></script>
-<script src="{% static 'ubicar/panel.js' %}"></script>
+<script src="{% static 'ubicar/mapa.js' %}?v=2"></script>
+<script src="{% static 'ubicar/panel.js' %}?v=2"></script>
 {% block script_pantalla %}{% endblock %}
 {% endblock %}

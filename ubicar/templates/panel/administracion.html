@@ -1,0 +1,46 @@
+{% extends "panel/base_panel.html" %}
+{% block titulo %}Administración · UBICAR{% endblock %}
+
+{% block contenido %}
+<div class="p-titulo"><h1>Administración</h1><div class="sub">Alta, baja y modificación de conductores, vehículos y asignaciones (se hace en el admin de Django)</div></div>
+
+<div class="kpis">
+  <div class="kpi">
+    <div class="rotulo">Paso 1 · Dar de alta un conductor</div>
+    <ol style="font-size:13px;padding-left:18px;margin:10px 0;line-height:1.7">
+      <li>Crear su <a href="/admin/auth/user/add/" target="_blank" style="color:var(--azul)">usuario</a> (con el que va a entrar a la app).</li>
+      <li>Crear el <a href="/admin/ubicar/conductor/add/" target="_blank" style="color:var(--azul)">conductor</a> con sus datos y elegir ese usuario en el campo "Usuario".</li>
+    </ol>
+  </div>
+  <div class="kpi verde">
+    <div class="rotulo">Paso 2 · Dar de alta un vehículo</div>
+    <ol style="font-size:13px;padding-left:18px;margin:10px 0;line-height:1.7">
+      <li>Crear el <a href="/admin/ubicar/vehiculo/add/" target="_blank" style="color:var(--azul)">vehículo</a>: patente, modelo, chasis, tipo, kilometraje y capacidad.</li>
+    </ol>
+  </div>
+  <div class="kpi rojo">
+    <div class="rotulo">Paso 3 · Asignarle el vehículo</div>
+    <ol style="font-size:13px;padding-left:18px;margin:10px 0;line-height:1.7">
+      <li>Crear una <a href="/admin/ubicar/asignacionvehiculo/add/" target="_blank" style="color:var(--azul)">asignación</a>: conductor, vehículo, desde y hasta qué fecha, y tildar "Activa".</li>
+      <li>Sin una asignación vigente el conductor no puede iniciar viajes.</li>
+    </ol>
+  </div>
+</div>
+
+<div class="tabla-caja">
+  <div class="tabla-cabecera"><h2>Tablas</h2></div>
+  <table class="tabla">
+    <tbody>
+      <tr><td><b>Conductores</b><span class="sub">Datos y licencia de cada chofer</span></td><td class="acciones"><a class="btn btn-borde btn-chico" href="/admin/ubicar/conductor/" target="_blank">Ver y modificar</a><a class="btn btn-navy btn-chico" href="/admin/ubicar/conductor/add/" target="_blank">+ Nuevo</a></td></tr>
+      <tr><td><b>Vehículos</b><span class="sub">Flota: patente, modelo, kilometraje, estado</span></td><td class="acciones"><a class="btn btn-borde btn-chico" href="/admin/ubicar/vehiculo/" target="_blank">Ver y modificar</a><a class="btn btn-navy btn-chico" href="/admin/ubicar/vehiculo/add/" target="_blank">+ Nuevo</a></td></tr>
+      <tr><td><b>Asignaciones de vehículos</b><span class="sub">Qué vehículo maneja cada conductor y en qué período</span></td><td class="acciones"><a class="btn btn-borde btn-chico" href="/admin/ubicar/asignacionvehiculo/" target="_blank">Ver y modificar</a><a class="btn btn-navy btn-chico" href="/admin/ubicar/asignacionvehiculo/add/" target="_blank">+ Nueva</a></td></tr>
+      <tr><td><b>Administradores</b><span class="sub">Quiénes auditan gastos y alertas (el mail debe coincidir con el del usuario)</span></td><td class="acciones"><a class="btn btn-borde btn-chico" href="/admin/ubicar/administrador/" target="_blank">Ver y modificar</a><a class="btn btn-navy btn-chico" href="/admin/ubicar/administrador/add/" target="_blank">+ Nuevo</a></td></tr>
+      <tr><td><b>Viajes, rutas, posiciones, gastos y alertas</b><span class="sub">Los genera la app; desde acá se pueden consultar o corregir</span></td><td class="acciones"><a class="btn btn-borde btn-chico" href="/admin/" target="_blank">Abrir admin completo</a></td></tr>
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block script_pantalla %}
+<script>Panel.iniciar();</script>
+{% endblock %}

@@ -6,13 +6,14 @@
   <title>{% block titulo %}UBICAR{% endblock %}</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="{% static 'ubicar/app.css' %}">
+  {# ?v=N evita que el navegador use una copia vieja del css/js: subir el número al cambiarlos #}
+  <link rel="stylesheet" href="{% static 'ubicar/app.css' %}?v=2">
 </head>
 <body class="{% block clase_body %}{% endblock %}">
 {% block cuerpo %}{% endblock %}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="{% static 'ubicar/api.js' %}"></script>
+<script src="{% static 'ubicar/api.js' %}?v=2"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

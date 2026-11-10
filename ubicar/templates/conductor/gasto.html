@@ -10,6 +10,10 @@
     <select id="tipo" required><option value="">Seleccionar tipo</option></select>
   </div>
   <div class="campo">
+    <label>Detalle <span class="ayuda" id="detalle-ayuda">(opcional)</span></label>
+    <input id="descripcion" maxlength="100" placeholder="Ej.: reparación de rueda pinchada">
+  </div>
+  <div class="campo">
     <label>Monto</label>
     <div class="prefijo"><span>$</span><input id="monto" type="number" step="0.01" min="0.01" placeholder="0.00" required></div>
   </div>
@@ -45,6 +49,13 @@
   }
   if (me.vehiculo_asignado) $('km').value = me.vehiculo_asignado.kilometraje;
 
+  // Si el tipo es "Otros", el detalle pasa a ser obligatorio: es lo que le dice al admin qué fue el gasto.
+  $('tipo').onchange = () => {
+    const esOtro = $('tipo').selectedOptions[0].textContent === 'Otros';
+    $('descripcion').required = esOtro;
+    $('detalle-ayuda').textContent = esOtro ? '(obligatorio: indicá qué gasto fue)' : '(opcional)';
+  };
+
   // Vista previa de la foto elegida.
   $('comprobante').onchange = e => {
     const f = e.target.files[0];
@@ -59,6 +70,7 @@
     $('enviar').disabled = true;
     const datos = new FormData();
     datos.append('tipo', $('tipo').value);
+    datos.append('descripcion', $('descripcion').value.trim());
     datos.append('monto', $('monto').value);
     datos.append('km_registrado', $('km').value);
     datos.append('comprobante', $('comprobante').files[0]);

@@ -12,6 +12,10 @@ from datetime import timedelta
 #arrancar con las clases independientes para no hacer una dependiente sin haber declarado de la que depende
 
 class Administrador(models.Model):
+    class Meta:
+        verbose_name = 'administrador'
+        verbose_name_plural = 'administradores'
+
     id_admin=models.AutoField(primary_key=True)
     nombre=models.CharField(max_length=30)
     apellido=models.CharField(max_length=30)
@@ -30,6 +34,10 @@ class Licencia(models.TextChoices):
      C3="C3", "C3"
       
 class Conductor(models.Model):
+    class Meta:
+        verbose_name = 'conductor'
+        verbose_name_plural = 'conductores'
+
     id_conductor=models.AutoField(primary_key=True)
     usuario = models.OneToOneField(
         User,
@@ -56,6 +64,10 @@ class TipoDeVehiculo(models.TextChoices):
     #agrego posibles choices de un vehiculo
 
 class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada atributo de esta clase se convertirá en una columna de esa tabla
+    class Meta:
+        verbose_name = 'vehículo'
+        verbose_name_plural = 'vehículos'
+
     patente=models.CharField(max_length=7,primary_key=True)
     #tipo=models.CharField(max_length=50)
     modelo=models.CharField(max_length=50)
@@ -73,6 +85,10 @@ class Vehiculo(models.Model): #representará una tabla en la base de datos. Cada
         return f"{self.patente} - {self.modelo}"
 
 class AsignacionVehiculo(models.Model):
+    class Meta:
+        verbose_name = 'asignación de vehículo'
+        verbose_name_plural = 'asignaciones de vehículos'
+
     conductor = models.ForeignKey(
         Conductor,
         on_delete=models.CASCADE
@@ -100,6 +116,10 @@ class AsignacionVehiculo(models.Model):
 
 
 class Ruta(models.Model):
+    class Meta:
+        verbose_name = 'ruta'
+        verbose_name_plural = 'rutas'
+
     id_ruta = models.AutoField(primary_key=True)
     origen=models.CharField(max_length=100)
     destino=models.CharField(max_length=100)
@@ -127,6 +147,10 @@ class EstadoViaje(models.TextChoices):
        FINALIZADO= "FINALIZADO" , "Finalizado" 
   
 class Viaje(models.Model):
+    class Meta:
+        verbose_name = 'viaje'
+        verbose_name_plural = 'viajes'
+
     id_viaje = models.AutoField(primary_key=True)
     estado = models.CharField(
       max_length=20,
@@ -370,6 +394,10 @@ class Viaje(models.Model):
     
 
 class Posicion(models.Model):
+    class Meta:
+        verbose_name = 'posición'
+        verbose_name_plural = 'posiciones'
+
     id_posicion = models.AutoField(primary_key=True)
     posicion_x= models.DecimalField( 
             max_digits=12, 
@@ -389,6 +417,10 @@ class Posicion(models.Model):
         return f"Posicion: {self.posicion_x} {self.posicion_y}"
 
 class estadoGasto(models.Model):
+    class Meta:
+        verbose_name = 'estado de gasto'
+        verbose_name_plural = 'estados de gasto'
+
     idEstado= models.AutoField(primary_key=True)
     ESTADOGASTO=[
         ('RECHAZADO','Rechazado'),
@@ -401,7 +433,14 @@ class estadoGasto(models.Model):
     estado=models.CharField(max_length=20,choices=ESTADOGASTO,default='PENDIENTE')
     descripcion=models.CharField(max_length=50)
 
+    def __str__(self):
+        return self.get_estado_display()
+
 class tipoDeGasto(models.Model):
+    class Meta:
+        verbose_name = 'tipo de gasto'
+        verbose_name_plural = 'tipos de gasto'
+
     idTipoDeGasto= models.AutoField(primary_key=True)
     GASTOS = [
         ('COMBUSTIBLE', 'Combustible'),
@@ -410,7 +449,14 @@ class tipoDeGasto(models.Model):
     ] #agrego posibles choices de un gasto
     razon_del_gasto= models.CharField(max_length=20,choices=GASTOS)
 
+    def __str__(self):
+        return self.get_razon_del_gasto_display()
+
 class Gasto(models.Model):
+    class Meta:
+        verbose_name = 'gasto'
+        verbose_name_plural = 'gastos'
+
     id_gasto = models.AutoField(primary_key=True)
     tipo = models.ForeignKey(tipoDeGasto,on_delete=models.PROTECT)
     monto = models.DecimalField(
@@ -419,6 +465,7 @@ class Gasto(models.Model):
         validators=[MinValueValidator(Decimal('0.01'))]
     )
     comprobante = models.FileField(upload_to='comprobantes/')
+    descripcion = models.CharField(max_length=100, blank=True, default='')  # detalle libre, p. ej. 'rueda pinchada'
     fecha_hora = models.DateTimeField(default= timezone.now)
     estado = models.ForeignKey(estadoGasto,on_delete=models.PROTECT)
     km_registrado = models.DecimalField(
@@ -520,6 +567,10 @@ class EstadoAlerta(models.TextChoices):
 
     
 class Alerta(models.Model):
+    class Meta:
+        verbose_name = 'alerta'
+        verbose_name_plural = 'alertas'
+
     id_alerta = models.AutoField(primary_key=True)
     tipo = models.CharField(max_length=20 ,choices=AlertaDefinida.choices)
     descripcion = models.CharField(max_length=250)

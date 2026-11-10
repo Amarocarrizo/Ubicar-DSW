@@ -41,6 +41,7 @@ urlpatterns = [
     path('panel/gastos/', views.panel_gastos),
     path('panel/desvios/', views.panel_desvios),
     path('panel/alerta/<int:id_alerta>/', views.panel_alerta),
+    path('panel/administracion/', views.panel_administracion),
     path(
         'api/login/',
         TokenObtainPairView.as_view(),

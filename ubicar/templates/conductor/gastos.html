@@ -20,7 +20,7 @@
   lista.innerHTML = gastos.map(g => {
     const [etiqueta, color] = ESTADOS[g.estado_nombre] || [g.estado_nombre, 'gris'];
     return `<div class="item">
-      <div><b>${nombreTipo(g.tipo)}</b> <span class="chip chip-${color}">${etiqueta}</span>
+      <div><b>${nombreTipo(g.tipo)}${g.descripcion ? ' · ' + F.texto(g.descripcion) : ''}</b> <span class="chip chip-${color}">${etiqueta}</span>
         <div class="sub">${F.fecha(g.fecha_hora)} ${F.hora(g.fecha_hora)} · ${Conductor.numero(g.viaje)} · ${Number(g.km_registrado).toLocaleString('es-AR')} km</div></div>
       <b>${F.plata(g.monto)}</b>
     </div>`;
