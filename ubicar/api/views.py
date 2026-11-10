@@ -271,8 +271,9 @@ class GastoViewsSet(viewsets.ModelViewSet):
         ).first()
 
         if estado_pendiente is None:
-            raise serializers.ValidationError(
-                "No existe el estado PENDIENTE para los gastos."
+            estado_pendiente = estadoGasto.objects.create(
+                estado='PENDIENTE',
+                descripcion='Pendiente de revisión'
             )
 
         # 5- Crear gasto asociado automáticamente al viaje
@@ -314,6 +315,12 @@ class TipoDeGastoViewSet(viewsets.ReadOnlyModelViewSet):
     """Catálogo de tipos de gasto (combustible, peaje, otros) para el formulario de carga."""
     queryset = tipoDeGasto.objects.all()
     serializer_class = TipoDeGastoSerializer
+
+    def get_queryset(self):
+        if not tipoDeGasto.objects.exists():
+            for codigo, _ in tipoDeGasto.GASTOS:
+                tipoDeGasto.objects.get_or_create(razon_del_gasto=codigo)
+        return tipoDeGasto.objects.all()
 
 class AlertaViewsSet(viewsets.ModelViewSet):
     queryset= Alerta.objects.all()

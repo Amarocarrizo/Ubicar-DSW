@@ -40,7 +40,12 @@
 
   // El backend asocia el gasto al viaje activo del conductor; acá solo se informa cuál es.
   const [tipos, activo] = await Promise.all([API.get('/api/tipos-gasto/'), Conductor.viajeActivo()]);
-  tipos.forEach(t => $('tipo').add(new Option(NOMBRES[t.razon_del_gasto] || t.razon_del_gasto, t.idTipoDeGasto)));
+  const listaTipos = (tipos && tipos.length > 0) ? tipos : [
+    { idTipoDeGasto: 1, razon_del_gasto: 'COMBUSTIBLE' },
+    { idTipoDeGasto: 2, razon_del_gasto: 'PEAJE' },
+    { idTipoDeGasto: 3, razon_del_gasto: 'OTROS' }
+  ];
+  listaTipos.forEach(t => $('tipo').add(new Option(NOMBRES[t.razon_del_gasto] || t.razon_del_gasto, t.idTipoDeGasto)));
   if (activo) {
     $('viaje-info').innerHTML = `Se asocia al viaje en curso <b>${Conductor.numero(activo.id_viaje)}</b> · ${F.texto(activo.ruta.origen)} → ${F.texto(activo.ruta.destino)}`;
   } else {
