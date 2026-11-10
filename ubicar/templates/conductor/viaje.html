@@ -172,7 +172,7 @@
     if (!viaje.hora_inicio) return;
     const fin = viaje.hora_llegada ? new Date(viaje.hora_llegada) : new Date();
     const min = Math.max(0, Math.round((fin - new Date(viaje.hora_inicio)) / 60000));
-    $('transcurrido').textContent = min < 60 ? min + ' min' : Math.floor(min / 60) + ' h ' + (min % 60) + ' min';
+    $('transcurrido').textContent = F.duracion(min);
   }, 1000);
 
     if (

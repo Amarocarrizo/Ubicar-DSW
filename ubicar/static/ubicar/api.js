@@ -87,6 +87,13 @@ const F = {
   km(n) { return Number(n || 0).toLocaleString('es-AR', { maximumFractionDigits: 1 }) + ' km'; },
   fecha(iso) { return iso ? new Date(iso).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'; },
   hora(iso) { return iso ? new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }) : '—'; },
+  duracion(minutos) {
+    const total = Math.max(0, Math.round(Number(minutos || 0)));
+    if (total < 60) return total + ' min';
+    const h = Math.floor(total / 60);
+    const m = total % 60;
+    return m === 0 ? `${h} hs` : `${h}:${String(m).padStart(2, '0')} hs`;
+  },
   texto(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); },
 };
 
