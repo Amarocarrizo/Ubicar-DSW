@@ -39,6 +39,7 @@ urlpatterns = [
     path('conductor/viajes/', views.conductor_viajes),
     path('conductor/gastos/', views.conductor_gastos),
     path('conductor/perfil/', views.conductor_perfil),
+    path('conductor/vehiculos/', views.conductor_vehiculos),
     path('panel/', views.panel_inicio),
     path('panel/gastos/', views.panel_gastos),
     path('panel/desvios/', views.panel_desvios),

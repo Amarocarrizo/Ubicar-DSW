@@ -62,6 +62,14 @@ class Conductor(models.Model):
 
     def __str__(self): 
         return f"{self.nombre} {self.apellido}"
+    def asignacion_actual(self):
+        """Devuelve la asignación vigente más reciente."""
+        hoy = timezone.localdate()
+        return self.asignacionvehiculo_set.select_related('vehiculo').filter(
+            activa=True,
+            fecha_desde__lte=hoy,
+            fecha_hasta__gte=hoy,
+        ).order_by('-fecha_desde', '-pk').first()
 
 class TipoDeVehiculo(models.TextChoices):
         AUTO="AUTO", "Auto"
@@ -194,39 +202,32 @@ class Viaje(models.Model):
         return f"Viaje: {self.id_viaje}"
 
     def iniciar_viaje(self, latitud_inicial=None, longitud_inicial=None):
-         if self.estado == EstadoViaje.EN_CURSO:
-           raise ValueError('El viaje ya está en curso')
+        if self.estado == EstadoViaje.EN_CURSO:
+            raise ValueError('El viaje ya está en curso')
 
-         if self.id_conductor is None:
-          raise ValueError('El viaje no tiene conductor asignado')
+        if self.id_conductor is None:
+            raise ValueError('El viaje no tiene conductor asignado')
 
-         if self.id_patente is None:
-          raise ValueError('El viaje no tiene vehículo asignado')
+        if self.id_patente is None:
+            raise ValueError('El viaje no tiene vehículo asignado')
 
-         if self.id_ruta is None:
-          raise ValueError('El viaje no tiene ruta asignada')
+        if self.id_ruta is None:
+            raise ValueError('El viaje no tiene ruta asignada')
 
-         asignacion = AsignacionVehiculo.objects.filter(
-         conductor=self.id_conductor,
-         vehiculo=self.id_patente,
-         activa=True,
-         fecha_desde__lte=timezone.now().date(),
-         fecha_hasta__gte=timezone.now().date()
-         ).exists()
+        actual = self.id_conductor.asignacion_actual()
 
-         if not asignacion:
+        if not actual or actual.vehiculo_id != self.id_patente_id:
             raise ValueError(
-        'El vehículo no está habilitado para este conductor'
-         )
+                'El vehículo no está habilitado para este conductor'
+            )
 
-         #estado_en_curso = EstadoViaje.objects.get(estado="EN CURSO")
+        self.estado = EstadoViaje.EN_CURSO
+        self.hora_inicio = timezone.now()
+        self.km_inicial = self.id_patente.kilometraje
+        self.save()
 
-         self.estado = EstadoViaje.EN_CURSO
-         self.hora_inicio = timezone.now()
-         self.km_inicial = self.id_patente.kilometraje
-         self.save()
-         if latitud_inicial is not None and longitud_inicial is not None:
-          self.registrar_posicion(latitud_inicial, longitud_inicial)
+        if latitud_inicial is not None and longitud_inicial is not None:
+            self.registrar_posicion(latitud_inicial, longitud_inicial)
     def _calcular_distancia_a_ruta(self, lat_actual, lon_actual):
         """Calcula la distancia mínima en metros entre la posición actual 
            y los puntos de la geometría de la ruta guardada en JSON.

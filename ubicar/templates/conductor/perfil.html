@@ -3,34 +3,110 @@
 
 {% block contenido %}
 <div class="m-titulo">Mi Perfil</div>
+
 <div class="tarjeta" id="perfil"></div>
+
 <div class="tarjeta">
   <p class="titulo-seccion">Modo demo</p>
-  <label style="display:flex;gap:10px;font-size:13px"><input type="checkbox" id="simular"> Simular el GPS recorriendo la ruta (para presentaciones sin señal)</label>
+
+  <label style="display:flex;gap:10px;font-size:13px">
+    <input type="checkbox" id="simular">
+    Simular el GPS recorriendo la ruta
+    (para presentaciones sin señal)
+  </label>
 </div>
-<button class="btn btn-rojo-borde btn-ancho" data-salir>Cerrar sesión</button>
+
+<button class="btn btn-rojo-borde btn-ancho" data-salir>
+  Cerrar sesión
+</button>
 {% endblock %}
 
 {% block script_pantalla %}
 <script>
 (async () => {
+  // Actualizar los datos cada vez que se abre el perfil.
+  sessionStorage.removeItem('me');
+
   const me = await Conductor.iniciar();
   if (!me) return;
-  const c = me.conductor, v = me.vehiculo_asignado;
+
+  const c = me.conductor;
+  const v = me.vehiculo_asignado;
+
   document.getElementById('perfil').innerHTML = `
-    <div class="m-fila" style="margin-bottom:12px"><div class="avatar" data-iniciales>${c.nombre[0]}${c.apellido[0]}</div>
-      <div><b style="font-size:15px">${F.texto(c.nombre)} ${F.texto(c.apellido)}</b><div class="ayuda">Conductor · Licencia ${F.texto(c.tipo_licencia)}</div></div></div>
+    <div class="m-fila" style="margin-bottom:12px">
+      <div class="avatar" data-iniciales>
+        ${F.texto(c.nombre[0])}${F.texto(c.apellido[0])}
+      </div>
+
+      <div>
+        <b style="font-size:15px">
+          ${F.texto(c.nombre)} ${F.texto(c.apellido)}
+        </b>
+
+        <div class="ayuda">
+          Conductor · Licencia ${F.texto(c.tipo_licencia)}
+        </div>
+      </div>
+    </div>
+
     <div class="datos">
-      <div class="dato"><div class="rotulo">Usuario</div><div class="valor">${F.texto(me.username)}</div></div>
-      <div class="dato"><div class="rotulo">DNI</div><div class="valor">${c.dni}</div></div>
-      <div class="dato"><div class="rotulo">Teléfono</div><div class="valor">${F.texto(c.telefono)}</div></div>
-      <div class="dato"><div class="rotulo">Mail</div><div class="valor" style="font-size:12px">${F.texto(c.mail)}</div></div>
-      <div class="dato" style="grid-column:1/-1"><div class="rotulo">Vehículo asignado</div>
-        <div class="valor">${v ? F.texto(v.modelo + ' · ' + v.patente + ' · ' + v.kilometraje.toLocaleString('es-AR') + ' km') : 'Ninguno'}</div></div>
-    </div>`;
+      <div class="dato">
+        <div class="rotulo">Usuario</div>
+        <div class="valor">${F.texto(me.username)}</div>
+      </div>
+
+      <div class="dato">
+        <div class="rotulo">DNI</div>
+        <div class="valor">${c.dni}</div>
+      </div>
+
+      <div class="dato">
+        <div class="rotulo">Teléfono</div>
+        <div class="valor">${F.texto(c.telefono)}</div>
+      </div>
+
+      <div class="dato">
+        <div class="rotulo">Mail</div>
+        <div class="valor" style="font-size:12px">
+          ${F.texto(c.mail)}
+        </div>
+      </div>
+
+      <div class="dato" style="grid-column:1/-1">
+        <div class="rotulo">Vehículo asignado</div>
+        <div class="valor">
+          ${
+            v
+              ? F.texto(
+                  v.modelo + ' · ' +
+                  v.patente + ' · ' +
+                  Number(v.kilometraje).toLocaleString('es-AR') +
+                  ' km'
+                )
+              : 'Ninguno'
+          }
+        </div>
+      </div>
+    </div>
+  `;
+
   const casilla = document.getElementById('simular');
+
   casilla.checked = localStorage.getItem('simular') === '1';
-  casilla.onchange = () => { localStorage.setItem('simular', casilla.checked ? '1' : '0'); aviso(casilla.checked ? 'Simulación activada' : 'Simulación desactivada'); };
+
+  casilla.onchange = () => {
+    localStorage.setItem(
+      'simular',
+      casilla.checked ? '1' : '0'
+    );
+
+    aviso(
+      casilla.checked
+        ? 'Simulación activada'
+        : 'Simulación desactivada'
+    );
+  };
 })();
 </script>
 {% endblock %}

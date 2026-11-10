@@ -48,18 +48,40 @@ class PosicionSerializer(serializers.ModelSerializer):
 
 
 class ViajeSerializer(serializers.ModelSerializer):
-    # Además de los ids, se devuelven los datos de la ruta, el vehículo y el conductor
-    # (solo lectura) para que el front no tenga que hacer un pedido extra por cada viaje.
     ruta = RutaSerializer(source='id_ruta', read_only=True)
     vehiculo = VehiculoSerializer(source='id_patente', read_only=True)
-    conductor = ConductorSerializer(source='id_conductor', read_only=True)
+    conductor = ConductorSerializer(
+        source='id_conductor',
+        read_only=True
+    )
+
+    def validate_id_patente(self, vehiculo):
+        request = self.context.get('request')
+
+        if (
+            request
+            and hasattr(request.user, 'conductor')
+            and not hasattr(request.user, 'administrador')
+        ):
+            actual = request.user.conductor.asignacion_actual()
+
+            if (
+                not actual
+                or not vehiculo
+                or actual.vehiculo_id != vehiculo.pk
+            ):
+                raise serializers.ValidationError(
+                    'Solo se puede usar el vehículo asignado actualmente.'
+                )
+
+        return vehiculo
 
     class Meta:
-        model= Viaje
-        fields= '__all__'
+        model = Viaje
+        fields = '__all__'
         read_only_fields = [
             'id_conductor',
-            'hora_inicio'
+            'hora_inicio',
         ]
 
 class GastoSerializer(serializers.ModelSerializer):

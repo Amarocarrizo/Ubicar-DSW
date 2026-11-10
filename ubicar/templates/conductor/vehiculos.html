@@ -1,0 +1,68 @@
+{% extends "conductor/base_conductor.html" %}
+{% block titulo %}Mis vehículos · UBICAR{% endblock %}
+
+{% block contenido %}
+<div class="m-titulo">Mis vehículos</div>
+
+<section class="tarjeta" id="mis-vehiculos">
+  <p class="ayuda">
+    El vehículo actual está activo. Los anteriores se muestran
+    solo para consulta y no se pueden seleccionar.
+  </p>
+
+  <div id="lista-vehiculos" aria-live="polite"></div>
+</section>
+{% endblock %}
+
+{% block script_pantalla %}
+<script>
+(async () => {
+  sessionStorage.removeItem('me');
+
+  const me = await Conductor.iniciar();
+  if (!me) return;
+
+  const vehiculos = me.mis_vehiculos || [];
+
+  document.getElementById('lista-vehiculos').innerHTML =
+    vehiculos.length
+      ? vehiculos.map(vehiculo => `
+          <article
+            style="padding:12px 0;border-top:1px solid var(--linea)"
+          >
+            <div
+              class="m-fila"
+              style="justify-content:space-between"
+            >
+              <b>
+                ${F.texto(vehiculo.modelo)} ·
+                ${F.texto(vehiculo.patente)}
+              </b>
+
+              <span
+                class="chip ${
+                  vehiculo.activo ? 'chip-verde' : 'chip-gris'
+                }"
+              >
+                ${vehiculo.activo ? 'Activo' : 'Inactivo'}
+              </span>
+            </div>
+
+            <div class="ayuda">
+              ${
+                vehiculo.activo
+                  ? 'Vehículo actual'
+                  : 'Vehículo anterior · Solo consulta'
+              }
+            </div>
+
+            <div class="ayuda">
+              ${F.texto(vehiculo.tipo_de_vehiculo)} ·
+              ${Number(vehiculo.kilometraje).toLocaleString('es-AR')} km
+            </div>
+          </article>
+        `).join('')
+      : '<p class="ayuda">Todavía no tenés vehículos asignados.</p>';
+})();
+</script>
+{% endblock %}

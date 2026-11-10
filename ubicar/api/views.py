@@ -108,13 +108,7 @@ class ViajeViewsSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         conductor = self.request.user.conductor
-
-        asignacion = AsignacionVehiculo.objects.filter(
-            conductor=conductor,
-            activa=True,
-            fecha_desde__lte=timezone.now().date(),
-            fecha_hasta__gte=timezone.now().date()
-        ).first()
+        asignacion = conductor.asignacion_actual()
 
         if not asignacion:
             raise serializers.ValidationError(
@@ -398,20 +392,21 @@ class AlertaViewsSet(viewsets.ModelViewSet):
             'mensaje': 'Alerta revisada sin novedad'
         })
 
-
-
 class MeView(APIView):
+    """Datos del usuario, vehículo actual e historial de vehículos."""
     """GET /api/me/ -> quién está logueado, su rol y sus datos.
+    
+        El front lo llama después del login para saber qué pantalla mostrar
+        (conductor o administrador) y con qué id de administrador aprobar/rechazar.
+        """
 
-    El front lo llama después del login para saber qué pantalla mostrar
-    (conductor o administrador) y con qué id de administrador aprobar/rechazar.
-    """
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
         user = request.user
         conductor = getattr(user, 'conductor', None)
         administrador = getattr(user, 'administrador', None)
+
         if not administrador and (user.is_staff or user.is_superuser):
             administrador = obtener_o_crear_administrador(user)
 
@@ -423,19 +418,49 @@ class MeView(APIView):
             rol = 'sin_rol'
 
         vehiculo = None
+        mis_vehiculos = []
+
         if conductor:
-            hoy = timezone.now().date()
-            asignacion = AsignacionVehiculo.objects.filter(
-                conductor=conductor, activa=True,
-                fecha_desde__lte=hoy, fecha_hasta__gte=hoy,
-            ).first()
-            if asignacion:
-                vehiculo = VehiculoSerializer(asignacion.vehiculo).data
+            actual = conductor.asignacion_actual()
+
+            if actual:
+                vehiculo = VehiculoSerializer(actual.vehiculo).data
+                mis_vehiculos.append({
+                    **vehiculo,
+                    'activo': True,
+                })
+
+            vistos = {actual.vehiculo_id} if actual else set()
+
+            historial = (
+                conductor.asignacionvehiculo_set
+                .select_related('vehiculo')
+                .filter(fecha_desde__lte=timezone.localdate())
+                .order_by('-fecha_desde', '-pk')
+            )
+
+            for asignacion in historial:
+                if asignacion.vehiculo_id in vistos:
+                    continue
+
+                vistos.add(asignacion.vehiculo_id)
+
+                mis_vehiculos.append({
+                    **VehiculoSerializer(asignacion.vehiculo).data,
+                    'activo': False,
+                })
 
         return Response({
             'username': user.username,
             'rol': rol,
-            'conductor': ConductorSerializer(conductor).data if conductor else None,
-            'administrador': AdministradorSerializer(administrador).data if administrador else None,
+            'conductor': (
+                ConductorSerializer(conductor).data
+                if conductor else None
+            ),
+            'administrador': (
+                AdministradorSerializer(administrador).data
+                if administrador else None
+            ),
             'vehiculo_asignado': vehiculo,
+            'mis_vehiculos': mis_vehiculos,
         })

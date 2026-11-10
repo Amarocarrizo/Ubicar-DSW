@@ -40,6 +40,8 @@ def conductor_gastos(request):
 def conductor_perfil(request):
     return render(request, 'conductor/perfil.html')
 
+def conductor_vehiculos(request):
+    return render(request, 'conductor/vehiculos.html')
 
 # --- Panel del administrador (web) ---
 def panel_inicio(request):
