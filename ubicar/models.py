@@ -524,7 +524,6 @@ class Gasto(models.Model):
      self.administrador = administrador
      self.save()
     def validar_gasto(self):
-
      km_gps = self.viaje.calcular_km_recorridos()
 
      km_declarados = (
@@ -537,25 +536,14 @@ class Gasto(models.Model):
      )
      TOLERANCIA_KM = 5
 
-     if diferencia <= TOLERANCIA_KM:
-
-        estado_validado = estadoGasto.objects.get(
-            estado='VALIDADO'
-        )
-
-        self.estado = estado_validado
-        self.save()
-
-        return True
-
-     else:
-
-        estado_revisar = estadoGasto.objects.get(
+     if diferencia > TOLERANCIA_KM:
+        estado_revisar = estadoGasto.objects.filter(
             estado='A_REVISAR'
-        )
+        ).first()
 
-        self.estado = estado_revisar
-        self.save()
+        if estado_revisar:
+            self.estado = estado_revisar
+            self.save()
 
         Alerta.objects.create(
             tipo=AlertaDefinida.GASTO_INCONSISTENTE,
@@ -569,6 +557,9 @@ class Gasto(models.Model):
         )
 
         return False
+
+     # Si la diferencia está dentro de la tolerancia, permanece PENDIENTE a la espera de la auditoría del administrador
+     return True
 
 class AlertaDefinida(models.TextChoices):
         DESVIO="DESVIO","Desvio"

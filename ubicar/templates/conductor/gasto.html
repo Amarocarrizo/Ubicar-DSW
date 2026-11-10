@@ -81,8 +81,7 @@
     datos.append('comprobante', $('comprobante').files[0]);
     try {
       const gasto = await API.post('/api/gasto/', datos);
-      // El backend ya lo validó contra los km del GPS: VALIDADO o A_REVISAR.
-      aviso(gasto.estado_nombre === 'VALIDADO' ? 'Gasto cargado y validado' : 'Gasto cargado, queda a revisar por el administrador');
+      aviso('Gasto cargado correctamente, pendiente de revisión por el administrador');
       setTimeout(() => location.href = '/conductor/gastos/', 1200);
     } catch (ex) { $('error').textContent = ex.message; $('error').classList.remove('oculto'); $('enviar').disabled = false; }
   };

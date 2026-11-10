@@ -3,6 +3,7 @@ Admin de Django: es el ABM (alta, baja y modificación) de todas las entidades.
 Acá solo se configura qué columnas, filtros y buscadores muestra cada tabla.
 """
 from django.contrib import admin
+from django.utils.html import format_html
 from ubicar.models import (
     Administrador, Conductor, Vehiculo, AsignacionVehiculo, Ruta, Viaje,
     Posicion, Gasto, Alerta, estadoGasto, tipoDeGasto,
@@ -40,8 +41,26 @@ class ViajeAdmin(admin.ModelAdmin):
 
 @admin.register(Gasto)
 class GastoAdmin(admin.ModelAdmin):
-    list_display = ('id_gasto', 'viaje', 'tipo', 'descripcion', 'monto', 'km_registrado', 'estado', 'fecha_hora')
+    list_display = ('id_gasto', 'viaje', 'tipo', 'descripcion', 'monto', 'km_registrado', 'estado', 'ver_comprobante', 'fecha_hora')
     list_filter = ('estado', 'tipo')
+    readonly_fields = ('ver_comprobante_detalle',)
+
+    def ver_comprobante(self, obj):
+        if obj.comprobante:
+            return format_html('<a href="{}" target="_blank">📄 Ver comprobante</a>', obj.comprobante.url)
+        return "Sin archivo"
+    ver_comprobante.short_description = 'Comprobante'
+
+    def ver_comprobante_detalle(self, obj):
+        if obj.comprobante:
+            return format_html(
+                '<a href="{0}" target="_blank">'
+                '<img src="{0}" style="max-height: 250px; max-width: 400px; display: block; margin-bottom: 8px; border-radius: 4px; border: 1px solid #ccc;" onerror="this.style.display=\'none\'"/>'
+                '📄 Abrir comprobante en pestaña nueva</a>',
+                obj.comprobante.url
+            )
+        return "Sin archivo"
+    ver_comprobante_detalle.short_description = 'Vista previa del comprobante'
 
 
 @admin.register(Alerta)
