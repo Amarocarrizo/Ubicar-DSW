@@ -29,6 +29,28 @@ from ubicar.api.serializer import AsignacionVehiculoSerializer
 from ubicar.api.serializer import TipoDeGastoSerializer
 from ubicar.permisos import EsConductor, EsAdministrador
 
+def obtener_o_crear_administrador(user):
+    """Devuelve la entidad Administrador del usuario o la crea automáticamente si es staff/superuser."""
+    if hasattr(user, 'administrador') and user.administrador:
+        return user.administrador
+    admin = Administrador.objects.filter(usuario=user).first()
+    if admin:
+        return admin
+    if user.is_staff or user.is_superuser:
+        admin, _ = Administrador.objects.get_or_create(
+            usuario=user,
+            defaults={
+                'nombre': user.first_name or user.username,
+                'apellido': user.last_name or 'Admin',
+                'mail': user.email or f"{user.username}@ubicar.com",
+                'telefono': '1100000000',
+                'dni': 90000000 + (user.id or 1)
+            }
+        )
+        return admin
+    return None
+
+
 class VehiculoViewsSet(viewsets.ModelViewSet):
     queryset= Vehiculo.objects.all()
     serializer_class=VehiculoSerializer
@@ -213,7 +235,7 @@ class GastoViewsSet(viewsets.ModelViewSet):
      usuario = self.request.user
 
      # Admin ve todos los gastos
-     if hasattr(usuario, 'administrador'):
+     if hasattr(usuario, 'administrador') or usuario.is_staff or usuario.is_superuser:
         return Gasto.objects.all()
 
      # Conductor ve solamente gastos de sus viajes
@@ -286,30 +308,31 @@ class GastoViewsSet(viewsets.ModelViewSet):
         gasto.validar_gasto()
     @action(detail=True, methods=['post'])
     def aprobar(self, request, pk=None):
-
-     gasto = self.get_object()
-
-     administrador = request.user.administrador
-
-     gasto.aprobar(administrador)
-
-     return Response({
-        'mensaje': 'Gasto aprobado correctamente'
-     })
-
+        gasto = self.get_object()
+        administrador = obtener_o_crear_administrador(request.user)
+        if not administrador:
+            return Response(
+                {'error': 'No se encontró un perfil de administrador asociado.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        gasto.aprobar(administrador)
+        return Response({
+            'mensaje': 'Gasto aprobado correctamente'
+        })
 
     @action(detail=True, methods=['post'])
     def rechazar(self, request, pk=None):
-
-     gasto = self.get_object()
-
-     administrador = request.user.administrador
-
-     gasto.rechazar(administrador)
-
-     return Response({
-        'mensaje': 'Gasto rechazado correctamente'
-     })
+        gasto = self.get_object()
+        administrador = obtener_o_crear_administrador(request.user)
+        if not administrador:
+            return Response(
+                {'error': 'No se encontró un perfil de administrador asociado.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        gasto.rechazar(administrador)
+        return Response({
+            'mensaje': 'Gasto rechazado correctamente'
+        })
 
 class TipoDeGastoViewSet(viewsets.ReadOnlyModelViewSet):
     """Catálogo de tipos de gasto (combustible, peaje, otros) para el formulario de carga."""
@@ -329,7 +352,7 @@ class AlertaViewsSet(viewsets.ModelViewSet):
 
      usuario = self.request.user
 
-     if hasattr(usuario, 'administrador'):
+     if hasattr(usuario, 'administrador') or usuario.is_staff or usuario.is_superuser:
         return Alerta.objects.all()
 
      if hasattr(usuario, 'conductor'):
@@ -349,28 +372,31 @@ class AlertaViewsSet(viewsets.ModelViewSet):
      return [permission() for permission in permission_classes]
     @action(detail=True, methods=['post'])
     def confirmar(self, request, pk=None):
+        alerta = self.get_object()
+        administrador = obtener_o_crear_administrador(request.user)
+        if not administrador:
+            return Response(
+                {'error': 'No se encontró un perfil de administrador asociado.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        alerta.confirmar_irregularidad(administrador)
+        return Response({
+            'mensaje': 'Irregularidad confirmada'
+        })
 
-     alerta = self.get_object()
-
-     administrador= request.user.administrador
-
-     alerta.confirmar_irregularidad(administrador)
-
-     return Response({
-        'mensaje': 'Irregularidad confirmada'
-     })
     @action(detail=True, methods=['post'])
     def sin_novedad(self, request, pk=None):
-
-     alerta = self.get_object()
-
-     administrador = request.user.administrador
-
-     alerta.revisar_sin_novedad(administrador)
-
-     return Response({
-        'mensaje': 'Alerta revisada sin novedad'
-     })
+        alerta = self.get_object()
+        administrador = obtener_o_crear_administrador(request.user)
+        if not administrador:
+            return Response(
+                {'error': 'No se encontró un perfil de administrador asociado.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        alerta.revisar_sin_novedad(administrador)
+        return Response({
+            'mensaje': 'Alerta revisada sin novedad'
+        })
 
 
 
@@ -386,8 +412,10 @@ class MeView(APIView):
         user = request.user
         conductor = getattr(user, 'conductor', None)
         administrador = getattr(user, 'administrador', None)
+        if not administrador and (user.is_staff or user.is_superuser):
+            administrador = obtener_o_crear_administrador(user)
 
-        if administrador or user.is_staff:
+        if administrador or user.is_staff or user.is_superuser:
             rol = 'admin'
         elif conductor:
             rol = 'conductor'

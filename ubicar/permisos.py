@@ -15,8 +15,12 @@ class EsConductor(BasePermission):
 class EsAdministrador(BasePermission):
 
     def has_permission(self, request, view):
-        return (
+        return bool(
             request.user
             and request.user.is_authenticated
-            and hasattr(request.user, 'administrador')
+            and (
+                hasattr(request.user, 'administrador')
+                or request.user.is_staff
+                or request.user.is_superuser
+            )
         )
